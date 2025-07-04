@@ -1,19 +1,12 @@
-# Add the ASCII logo/banner at the top
-LOGO = '''
+```
 ██████╗ ███████╗███╗   ██╗████████╗██████╗  █████╗ ██╗  ██╗
 ██╔══██╗██╔════╝████╗  ██║╚══██╔══╝██╔══██╗██╔══██╗╚██╗██╔╝
 ██████╔╝█████╗  ██╔██╗ ██║   ██║   ██████╔╝███████║ ╚███╔╝ 
 ██╔═══╝ ██╔══╝  ██║╚██╗██║   ██║   ██╔═══╝ ██╔══██║ ██╔██╗ 
 ██║     ███████╗██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
 ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
-FULL PENTEST TOOLKIT (WSL EDITION)
-'''
-
-# Insert the logo at the top
-README = f"""
-<pre>
-{LOGO}
-</pre>
+FULL PENTEST TOOLKIT (v1.0)
+```
 
 # 🛡️ pentraX - Full Pentesting Toolkit (Linux)
 
@@ -61,9 +54,4 @@ README = f"""
 
 ---
 
-> **Have fun, hack ethically, and enjoy the animations!**
-"""
-
-# Overwrite the README.md file with the new content
-with open("README.md", "w") as f:
-    f.write(README) 
+> **Have fun, hack ethically, be a legion!** 
