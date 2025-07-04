@@ -755,6 +755,7 @@ def wifi_handshake_capture():
             print("[!] aircrack-ng not found. Cannot check for handshake presence.")
     else:
         print(f"[-] Handshake file {cap_file} not found or empty. Capture may have failed.")
+    input("\n[Press Enter to return to the menu]")
 
 def wifi_crack_handshake():
     print("[+] Crack WPA/WPA2 handshake with aircrack-ng or hashcat...")
@@ -791,6 +792,7 @@ def wifi_crack_handshake():
         except Exception as e:
             print(f"[-] aircrack-ng failed: {e}")
     # Optionally, add hashcat support here
+    input("\n[Press Enter to return to the menu]")
 
 def wifi_deauth_attack():
     print("[+] Deauthentication attack (requires monitor mode and root)...")
