@@ -50,7 +50,7 @@ FULL PENTEST TOOLKIT (v1.0)
 - Wordlists: rockyou.txt, dirb/common.txt, subdomains-top1million-5000.txt (auto-downloaded)
 
 ## 👨‍💻 Author
-- astra-incognito ([GitHub Profile](https://github.com/astra-incognito/))
+- astra-incognito ([GitHub Profile](https://github.com/astra-incognito/)) 
 
 ---
 

