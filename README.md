@@ -6,7 +6,6 @@
 ██║     ███████╗██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
 ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
 FULL PENTEST TOOLKIT (v1.0)
-```
 
 # 🛡️ pentraX - Full Pentesting Toolkit (Linux)
 
@@ -18,6 +17,35 @@ FULL PENTEST TOOLKIT (v1.0)
 > Unauthorized use against systems you do not own or have explicit written permission to test is **illegal and unethical**.
 > By using this toolkit, you agree to comply with all applicable laws and regulations.
 > The author assumes no liability for misuse or damage caused by this software.
+
+---
+
+## 🏃‍♂️ How to Run (Python & C++ Versions)
+
+### ▶️ Python Version
+1. Ensure you have Python 3 installed.
+2. Run:
+   ```sh
+   python3 pentrax.py
+   ```
+3. The toolkit will auto-install all required tools and wordlists (requires sudo/root).
+
+### ▶️ C++ Version
+1. Ensure you have a C++ compiler (g++), OpenSSL development libraries, and required system tools installed.
+   - On Ubuntu/Kali/WSL:
+     ```sh
+     sudo apt update
+     sudo apt install g++ libssl-dev
+     ```
+2. Compile the C++ toolkit:
+   ```sh
+   g++ -o pentrax pentrax.cpp -lssl -lcrypto
+   ```
+3. Run the compiled binary:
+   ```sh
+   ./pentrax
+   ```
+4. Run as root or with sudo for full functionality (for features requiring elevated privileges).
 
 ---
 
