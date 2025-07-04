@@ -371,8 +371,8 @@ def spoof_email():
     try:
         result = subprocess.run(["sendmail", recipient], input=message.encode(), capture_output=True, text=True)
         if result.returncode == 0:
-            print("[+] Spoofed email sent.")
-            log_result("spoofmail", f"From: {sender} To: {recipient} Subject: {subject}")
+        print("[+] Spoofed email sent.")
+        log_result("spoofmail", f"From: {sender} To: {recipient} Subject: {subject}")
         else:
             print(f"[-] sendmail failed: {result.stderr}")
             print("[!] Troubleshooting: Ensure sendmail is configured and your system allows local mail delivery.")
@@ -1100,7 +1100,7 @@ def wifi_mitm_menu():
 5. Bettercap (Full WiFi MITM)
 0. Back
 """
-    while True:
+while True:
         print_menu_no_clear(menu_text)
         choice = input("[WiFi MITM] Select Option > ").strip()
         if choice == "1":
@@ -1871,4 +1871,4 @@ while True:
             action()
             continue
     if not found:
-        print("Invalid option.")
+            print("Invalid option.")

