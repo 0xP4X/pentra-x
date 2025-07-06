@@ -1,0 +1,21 @@
+
+# Ignore all files in the hs directory
+hs/
+# Ignore all files in the cracked.json directory
+cracked.json
+# Ignore all files in the .env directory
+.env
+# Ignore all files in the .DS_Store directory
+.DS_Store
+# Ignore all files in the .vscode directory
+.vscode/
+# Ignore all files in the .idea directory
+.idea/
+# Ignore all files in the .vscode directory
+.vscode/
+
+
+
+
+
+
