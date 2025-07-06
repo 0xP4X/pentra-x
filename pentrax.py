@@ -1,20 +1,9 @@
 #!/usr/bin/env python3
 # pentraX_wsl.py - Full Pentesting Toolkit (WSL Compatible + Social Engineering)
 
-import subprocess
-import socket
-import requests
-import hashlib
-import os
-import ssl
-import json
-import time
-import threading
-import shutil
-from urllib.parse import urlparse
+# Minimal imports for logo/disclaimer
 import sys
-import re
-from datetime import datetime
+import time
 
 # Add color output utilities
 class Colors:
@@ -27,6 +16,67 @@ class Colors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
+def typewriter(text, delay=0.01):
+    for char in text:
+        print(char, end='', flush=True)
+        time.sleep(delay)
+
+def animated_print(text, delay=0.03):
+    for line in text.splitlines():
+        print(line)
+        time.sleep(delay)
+
+BANNER = f"""
+{Colors.OKCYAN}
+██████╗ ███████╗███╗   ██╗████████╗██████╗  █████╗ ██╗  ██╗
+██╔══██╗██╔════╝████╗  ██║╚══██╔══╝██╔══██╗██╔══██╗╚██╗██╔╝
+██████╔╝█████╗  ██╔██╗ ██║   ██║   ██████╔╝███████║ ╚███╔╝ 
+██╔═══╝ ██╔══╝  ██║╚██╗██║   ██║   ██╔═══╝ ██╔══██║ ██╔██╗ 
+██║     ███████╗██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
+╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
+              FULL PENTEST TOOLKIT (V1.2.1)
+
+         {Colors.BOLD}Created by astra-incognito{Colors.ENDC}{Colors.OKCYAN}
+         GitHub: https://github.com/astra-incognito/
+"""
+
+DISCLAIMER = f"""
+{Colors.WARNING}{Colors.BOLD}DISCLAIMER:{Colors.ENDC}{Colors.WARNING}
+This toolkit is for educational and authorized penetration testing use only.
+Unauthorized use against systems you do not own or have explicit written permission to test is illegal and unethical.
+By using this toolkit, you agree to comply with all applicable laws and regulations.
+The author assumes no liability for misuse or damage caused by this software.
+{Colors.ENDC}
+"""
+
+# Show logo and disclaimer for all users
+animated_print(BANNER, delay=0.03)
+print()
+typewriter(DISCLAIMER, delay=0.01)
+print()
+
+# Now check platform
+if not sys.platform.startswith('linux'):
+    print("\n[!] PENTRA-X is only supported on Linux. Some features (like arrow-key menus, wireless attacks, and advanced networking) will NOT work on Windows.\nPlease use a Linux system (Kali, Parrot, Ubuntu, etc.) for full functionality.\n")
+    sys.exit(1)
+
+# All other imports below...
+import subprocess
+import socket
+import requests
+import hashlib
+import os
+import ssl
+import json
+import threading
+import shutil
+import signal
+import sys
+from urllib.parse import urlparse
+import re
+from datetime import datetime
+import curses
 
 def cprint(text, color):
     print(f"{color}{text}{Colors.ENDC}")
@@ -41,6 +91,104 @@ def typewriter(text, delay=0.01):
         print(char, end='', flush=True)
         time.sleep(delay)
 
+def safe_subprocess_run(cmd, **kwargs):
+    """Run subprocess command with proper cleanup tracking"""
+    try:
+        process = subprocess.Popen(cmd, **kwargs)
+        running_processes.append(process)
+        result = process.communicate()
+        running_processes.remove(process)
+        return subprocess.CompletedProcess(cmd, process.returncode, result[0], result[1])
+    except Exception as e:
+        print(f"{Colors.FAIL}[-] Subprocess error: {e}{Colors.ENDC}")
+        return None
+
+def safe_subprocess_run_with_output(cmd, **kwargs):
+    """Run subprocess command with real-time output and CTRL+C handling"""
+    try:
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
+                                 text=True, **kwargs)
+        running_processes.append(process)
+        
+        # Read output in real-time
+        for line in process.stdout:
+            print(line, end='', flush=True)
+        
+        process.wait()
+        running_processes.remove(process)
+        return process.returncode == 0
+        
+    except KeyboardInterrupt:
+        if 'process' in locals():
+            print(f"\n{Colors.WARNING}[!] Terminating process...{Colors.ENDC}")
+            process.terminate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process.kill()
+            running_processes.remove(process)
+        return False
+    except Exception as e:
+        print(f"{Colors.FAIL}[-] Subprocess error: {e}{Colors.ENDC}")
+        if 'process' in locals() and process in running_processes:
+            running_processes.remove(process)
+        return False
+
+def safe_input(prompt=""):
+    """Get user input with CTRL+C handling"""
+    try:
+        return input(prompt)
+    except KeyboardInterrupt:
+        print(f"\n{Colors.WARNING}[!] Input cancelled by user{Colors.ENDC}")
+        return None
+
+def run_with_interrupt_handling(func, *args, **kwargs):
+    """Run a function with proper CTRL+C handling"""
+    try:
+        return func(*args, **kwargs)
+    except KeyboardInterrupt:
+        print(f"\n{Colors.WARNING}[!] Operation cancelled by user{Colors.ENDC}")
+        return None
+    except Exception as e:
+        print(f"\n{Colors.FAIL}[!] Error during operation: {e}{Colors.ENDC}")
+        return None
+
+def safe_press_enter(prompt="\n[Press Enter to return to the menu]"):
+    """Safe 'Press Enter' prompt with CTRL+C handling"""
+    try:
+        input(prompt)
+    except KeyboardInterrupt:
+        print(f"\n{Colors.WARNING}[!] Returning to menu...{Colors.ENDC}")
+        return
+
+def run_long_operation(operation_name, operation_func, *args, **kwargs):
+    """Run a long operation with proper CTRL+C handling and progress indication"""
+    print(f"{Colors.OKBLUE}[*] Starting {operation_name}...{Colors.ENDC}")
+    print(f"{Colors.WARNING}[!] Press Ctrl+C to cancel at any time{Colors.ENDC}")
+    
+    try:
+        # Create a spinner for the operation
+        spinner = Spinner(f"Running {operation_name}")
+        spinner.start()
+        
+        # Run the operation
+        result = operation_func(*args, **kwargs)
+        
+        spinner.stop()
+        print(f"{Colors.OKGREEN}[+] {operation_name} completed successfully{Colors.ENDC}")
+        return result
+        
+    except KeyboardInterrupt:
+        if 'spinner' in locals():
+            spinner.stop()
+        print(f"\n{Colors.WARNING}[!] {operation_name} cancelled by user{Colors.ENDC}")
+        return None
+    except Exception as e:
+        if 'spinner' in locals():
+            spinner.stop()
+        print(f"\n{Colors.FAIL}[!] {operation_name} failed: {e}{Colors.ENDC}")
+        return None
+
 class Spinner:
     def __init__(self, message="Working..."):
         self.spinner = ['|', '/', '-', '\\']
@@ -48,6 +196,9 @@ class Spinner:
         self.running = False
         self.thread = None
         self.message = message
+        # Register with global active spinners
+        active_spinners.append(self)
+    
     def start(self):
         self.running = True
         def spin():
@@ -57,11 +208,15 @@ class Spinner:
                 time.sleep(0.1)
         self.thread = threading.Thread(target=spin)
         self.thread.start()
+    
     def stop(self):
         self.running = False
         if self.thread:
             self.thread.join()
         print("\r" + " " * (len(self.message) + 4) + "\r", end='')
+        # Remove from active spinners
+        if self in active_spinners:
+            active_spinners.remove(self)
 
 def print_menu_with_header(menu_text):
     print(BANNER)
@@ -84,41 +239,6 @@ def color_menu_numbers(menu_text):
     def repl(match):
         return f"{Colors.OKCYAN}{match.group(0)}{Colors.ENDC}"
     return re.sub(r"^\s*\d+\. ", repl, menu_text, flags=re.MULTILINE)
-
-BANNER = f"""
-{Colors.OKCYAN}
-██████╗ ███████╗███╗   ██╗████████╗██████╗  █████╗ ██╗  ██╗
-██╔══██╗██╔════╝████╗  ██║╚══██╔══╝██╔══██╗██╔══██╗╚██╗██╔╝
-██████╔╝█████╗  ██╔██╗ ██║   ██║   ██████╔╝███████║ ╚███╔╝ 
-██╔═══╝ ██╔══╝  ██║╚██╗██║   ██║   ██╔═══╝ ██╔══██║ ██╔██╗ 
-██║     ███████╗██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
-╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
-              FULL PENTEST TOOLKIT (V1.2.1)
-
-         {Colors.BOLD}Created by astra-incognito{Colors.ENDC}{Colors.OKCYAN}
-         GitHub: https://github.com/astra-incognito/
-"""
-
-# Add a prominent disclaimer under the logo
-DISCLAIMER = f"""
-{Colors.WARNING}{Colors.BOLD}DISCLAIMER:{Colors.ENDC}{Colors.WARNING}
-This toolkit is for educational and authorized penetration testing use only.
-Unauthorized use against systems you do not own or have explicit written permission to test is illegal and unethical.
-By using this toolkit, you agree to comply with all applicable laws and regulations.
-The author assumes no liability for misuse or damage caused by this software.
-{Colors.ENDC}
-"""
-
-# Animated logo/banner reveal
-animated_print(BANNER, delay=0.03)
-
-# Typewriter effect for disclaimer
-print()
-typewriter(DISCLAIMER, delay=0.01)
-
-if sys.platform != "linux" and sys.platform != "linux2":
-    print("[!] This toolkit is only supported on Linux.")
-    sys.exit(1)
 
 def check_and_prompt_dependencies():
     """Check for required dependencies, list missing ones, and prompt user for installation options."""
@@ -2455,27 +2575,33 @@ def advanced_ipv6_attacks():
 def arp_scan_wrapper():
     print("[+] ARP Scan - Find live hosts on local network")
     print("[!] This requires sudo privileges.")
-    input("Press Enter to continue...")
+    safe_press_enter("Press Enter to continue...")
     arp_scan()
-    input("\n[Press Enter to return to the menu]")
+    safe_press_enter("\n[Press Enter to return to the menu]")
 
 def port_scan_wrapper():
     print("[+] Port Scan - Scan target for open ports")
-    target = input("Target IP/hostname: ").strip()
-    if not target:
+    target = safe_input("Target IP/hostname: ")
+    if target is None:
+        return
+    if not target.strip():
         print("[-] Target required.")
         return
+    target = target.strip()
     port_scan(target)
-    input("\n[Press Enter to return to the menu]")
+    safe_press_enter("\n[Press Enter to return to the menu]")
 
 def whois_wrapper():
     print("[+] Whois Lookup - Get domain registration info")
-    domain = input("Domain: ").strip()
-    if not domain:
+    domain = safe_input("Domain: ")
+    if domain is None:
+        return
+    if not domain.strip():
         print("[-] Domain required.")
         return
+    domain = domain.strip()
     whois_lookup(domain)
-    input("\n[Press Enter to return to the menu]")
+    safe_press_enter("\n[Press Enter to return to the menu]")
 
 def headers_wrapper():
     print("[+] HTTP Headers - Get HTTP response headers")
@@ -4455,13 +4581,120 @@ def wifi_handshake_advanced_wrapper():
     
     input("\n[Press Enter to return to the menu]")
 
+def network_enumeration():
+    """Comprehensive network enumeration tool"""
+    print(f"{Colors.OKCYAN}[+] Network Enumeration Tool{Colors.ENDC}")
+    print("This tool performs comprehensive network enumeration including:")
+    print("- Live host discovery")
+    print("- Service enumeration") 
+    print("- OS fingerprinting")
+    print("- Network topology mapping")
+    print("- Vulnerability assessment")
+    
+    target = input("Target network (e.g. 192.168.1.0/24): ").strip()
+    if not target:
+        print("[-] Target required.")
+        return
+    
+    print(f"\n{Colors.OKBLUE}[*] Starting comprehensive network enumeration...{Colors.ENDC}")
+    
+    # 1. Live host discovery
+    print(f"\n{Colors.OKGREEN}[+] Phase 1: Live Host Discovery{Colors.ENDC}")
+    try:
+        # Ping sweep
+        print("[*] Performing ping sweep...")
+        ping_cmd = ["nmap", "-sn", target]
+        subprocess.run(ping_cmd)
+        
+        # ARP scan
+        print("[*] Performing ARP scan...")
+        arp_cmd = ["nmap", "-sn", "--send-ip", target]
+        subprocess.run(arp_cmd)
+        
+    except Exception as e:
+        print(f"[-] Host discovery failed: {e}")
+    
+    # 2. Port scanning and service enumeration
+    print(f"\n{Colors.OKGREEN}[+] Phase 2: Port Scanning & Service Enumeration{Colors.ENDC}")
+    try:
+        # TCP SYN scan
+        print("[*] Performing TCP SYN scan...")
+        syn_cmd = ["nmap", "-sS", "-sV", "-O", "--version-intensity", "5", target]
+        subprocess.run(syn_cmd)
+        
+        # UDP scan for common ports
+        print("[*] Performing UDP scan...")
+        udp_cmd = ["nmap", "-sU", "--top-ports", "100", target]
+        subprocess.run(udp_cmd)
+        
+    except Exception as e:
+        print(f"[-] Port scanning failed: {e}")
+    
+    # 3. Advanced enumeration
+    print(f"\n{Colors.OKGREEN}[+] Phase 3: Advanced Enumeration{Colors.ENDC}")
+    try:
+        # Script scan
+        print("[*] Running NSE scripts...")
+        script_cmd = ["nmap", "--script", "vuln,discovery,auth", target]
+        subprocess.run(script_cmd)
+        
+        # Service enumeration
+        print("[*] Enumerating services...")
+        service_cmd = ["nmap", "-sV", "--version-all", "--script", "banner", target]
+        subprocess.run(service_cmd)
+        
+    except Exception as e:
+        print(f"[-] Advanced enumeration failed: {e}")
+    
+    # 4. Network topology
+    print(f"\n{Colors.OKGREEN}[+] Phase 4: Network Topology{Colors.ENDC}")
+    try:
+        # Traceroute
+        print("[*] Mapping network topology...")
+        trace_cmd = ["nmap", "--traceroute", target]
+        subprocess.run(trace_cmd)
+        
+    except Exception as e:
+        print(f"[-] Topology mapping failed: {e}")
+    
+    # 5. Vulnerability assessment
+    print(f"\n{Colors.OKGREEN}[+] Phase 5: Vulnerability Assessment{Colors.ENDC}")
+    try:
+        # Vulnerability scan
+        print("[*] Running vulnerability scan...")
+        vuln_cmd = ["nmap", "--script", "vuln", target]
+        subprocess.run(vuln_cmd)
+        
+    except Exception as e:
+        print(f"[-] Vulnerability scan failed: {e}")
+    
+    print(f"\n{Colors.OKGREEN}[+] Network enumeration completed!{Colors.ENDC}")
+    print(f"{Colors.OKBLUE}[*] Check the output above for discovered hosts and services.{Colors.ENDC}")
+    
+    # Save results
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    results_file = f"network_enum_{timestamp}.txt"
+    
+    try:
+        with open(results_file, "w") as f:
+            f.write(f"Network Enumeration Results - {target}\n")
+            f.write(f"Timestamp: {datetime.now()}\n")
+            f.write("=" * 50 + "\n")
+            f.write("Use the output above to analyze discovered hosts and services.\n")
+        print(f"{Colors.OKGREEN}[+] Results saved to: {results_file}{Colors.ENDC}")
+    except Exception as e:
+        print(f"[-] Failed to save results: {e}")
+    
+    log_result("network_enum", f"Target: {target} | Results: {results_file}")
+    input("\n[Press Enter to return to the menu]")
+
 # Categorized menu system
 categorized_menus = {
     "Network Reconnaissance": [
         ("1. ARP Scan", arp_scan_wrapper),
         ("2. Port Scan", port_scan_wrapper),
         ("3. Nmap Advanced Scan", nmap_advanced_wrapper),
-        ("4. Network Enumeration", None),  # Placeholder for future
+        ("4. Network Enumeration", network_enumeration),
     ],
     
     "Web Testing & Exploitation": [
@@ -4542,34 +4775,57 @@ main_categories = [
 ]
 
 def show_category_menu(category):
-    """Display menu for a specific category"""
-    print(f"\n{Colors.OKCYAN}=== {category} ==={Colors.ENDC}")
+    """Display menu for a specific category with arrow key navigation and colorization"""
     tools = categorized_menus[category]
-    
-    for i, (tool_name, tool_func) in enumerate(tools, 1):
-        # Extract the tool name without the number
-        clean_name = tool_name.split('. ', 1)[1] if '. ' in tool_name else tool_name
-        print(f"{Colors.OKCYAN}{i}.{Colors.ENDC} {clean_name}")
-    
-    print(f"{Colors.OKCYAN}0.{Colors.ENDC} Back to Main Menu")
-    
-    choice = input(f"\n[{category}] Select Option > ").strip()
-    
-    if choice == "0":
-        return
-    
-    try:
-        choice_num = int(choice)
-        if 1 <= choice_num <= len(tools):
-            tool_name, tool_func = tools[choice_num - 1]
-            if tool_func:
-                tool_func()
-            else:
-                print(f"[-] {tool_name} - Coming soon!")
-        else:
-            print("[-] Invalid option.")
-    except ValueError:
-        print("[-] Invalid input.")
+    def menu(stdscr):
+        curses.curs_set(0)
+        curses.start_color()
+        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)   # Selected
+        curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK) # Header
+        curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)    # Warning/Error
+        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK)  # Regular
+        current_row = 0
+        while True:
+            stdscr.clear()
+            stdscr.attron(curses.color_pair(2) | curses.A_BOLD)
+            stdscr.addstr(0, 0, f"=== {category} ===")
+            stdscr.attroff(curses.color_pair(2) | curses.A_BOLD)
+            for i, (tool_name, tool_func) in enumerate(tools):
+                clean_name = tool_name.split('. ', 1)[1] if '. ' in tool_name else tool_name
+                if i == current_row:
+                    stdscr.attron(curses.color_pair(1))
+                    stdscr.addstr(i+2, 2, f"> {clean_name}")
+                    stdscr.attroff(curses.color_pair(1))
+                else:
+                    stdscr.attron(curses.color_pair(4))
+                    stdscr.addstr(i+2, 4, clean_name)
+                    stdscr.attroff(curses.color_pair(4))
+            stdscr.attron(curses.color_pair(4))
+            stdscr.addstr(len(tools)+3, 2, "0. Back to Main Menu")
+            stdscr.attroff(curses.color_pair(4))
+            stdscr.refresh()
+            key = stdscr.getch()
+            if key == curses.KEY_UP and current_row > 0:
+                current_row -= 1
+            elif key == curses.KEY_DOWN and current_row < len(tools)-1:
+                current_row += 1
+            elif key in [curses.KEY_ENTER, 10, 13]:
+                if current_row == -1:
+                    break
+                tool_name, tool_func = tools[current_row]
+                if tool_func:
+                    curses.endwin()
+                    tool_func()
+                    return
+                else:
+                    stdscr.attron(curses.color_pair(3) | curses.A_BOLD)
+                    stdscr.addstr(len(tools)+5, 2, f"[-] {tool_name} - Coming soon!")
+                    stdscr.attroff(curses.color_pair(3) | curses.A_BOLD)
+                    stdscr.refresh()
+                    stdscr.getch()
+            elif key == ord('0'):
+                break
+    curses.wrapper(menu)
 
 def show_main_menu():
     """Display the main categorized menu"""
@@ -4581,7 +4837,11 @@ def show_main_menu():
     
     print(f"{Colors.OKCYAN}0.{Colors.ENDC} Exit")
     
-    choice = input(f"\n{Colors.OKGREEN}Select Category > {Colors.ENDC}").strip()
+    choice = safe_input(f"\n{Colors.OKGREEN}Select Category > {Colors.ENDC}")
+    if choice is None:
+        return
+    
+    choice = choice.strip()
     
     if choice == "0":
         print("Exiting...")
@@ -4699,7 +4959,11 @@ def manage_tools():
         print("6. Create Custom Tool Wrapper")
         print("0. Back to Main Menu")
         
-        choice = input(f"\n{Colors.OKGREEN}Select Option > {Colors.ENDC}").strip()
+        choice = safe_input(f"\n{Colors.OKGREEN}Select Option > {Colors.ENDC}")
+        if choice is None:
+            continue
+        
+        choice = choice.strip()
         
         if choice == "1":
             check_and_prompt_dependencies()
@@ -4722,46 +4986,51 @@ def update_all_tools():
     """Update all installed tools"""
     print(f"{Colors.OKBLUE}[*] Updating all tools...{Colors.ENDC}")
     
-    # Update package manager tools
-    subprocess.run(["sudo", "apt", "update"])
-    subprocess.run(["sudo", "apt", "upgrade", "-y"])
-    
-    # Update Python tools
-    subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
-    subprocess.run([sys.executable, "-m", "pip", "list", "--outdated", "--format=freeze"], capture_output=True)
-    
-    # Update Go tools
-    subprocess.run(["go", "install", "-u", "all"])
-    
-    # Update Ruby tools
-    subprocess.run(["sudo", "gem", "update"])
-    
-    # Update GitHub tools
-    github_tools = [
-        "/opt/BlackEye",
-        "/opt/SocialFish", 
-        "/opt/HiddenEye",
-        "/opt/wifiphisher",
-        "/opt/sherlock",
-        "/opt/Photon",
-        "/opt/subfinder",
-        "/opt/amass",
-        "/opt/nuclei",
-        "/opt/httpx",
-        "/opt/naabu",
-        "/opt/theHarvester",
-        "/opt/recon-ng",
-    ]
-    
-    for tool_path in github_tools:
-        if os.path.exists(tool_path):
-            print(f"{Colors.OKBLUE}[*] Updating {os.path.basename(tool_path)}...{Colors.ENDC}")
-            try:
-                subprocess.run(["sudo", "git", "-C", tool_path, "pull"], capture_output=True)
-            except Exception as e:
-                print(f"{Colors.FAIL}[-] Failed to update {tool_path}: {e}{Colors.ENDC}")
-    
-    print(f"{Colors.OKGREEN}[+] All tools updated!{Colors.ENDC}")
+    try:
+        # Update package manager tools
+        safe_subprocess_run(["sudo", "apt", "update"])
+        safe_subprocess_run(["sudo", "apt", "upgrade", "-y"])
+        
+        # Update Python tools
+        safe_subprocess_run([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
+        safe_subprocess_run([sys.executable, "-m", "pip", "list", "--outdated", "--format=freeze"], capture_output=True)
+        
+        # Update Go tools
+        safe_subprocess_run(["go", "install", "-u", "all"])
+        
+        # Update Ruby tools
+        safe_subprocess_run(["sudo", "gem", "update"])
+        
+        # Update GitHub tools
+        github_tools = [
+            "/opt/BlackEye",
+            "/opt/SocialFish", 
+            "/opt/HiddenEye",
+            "/opt/wifiphisher",
+            "/opt/sherlock",
+            "/opt/Photon",
+            "/opt/subfinder",
+            "/opt/amass",
+            "/opt/nuclei",
+            "/opt/httpx",
+            "/opt/naabu",
+            "/opt/theHarvester",
+            "/opt/recon-ng",
+        ]
+        
+        for tool_path in github_tools:
+            if os.path.exists(tool_path):
+                print(f"{Colors.OKBLUE}[*] Updating {os.path.basename(tool_path)}...{Colors.ENDC}")
+                try:
+                    safe_subprocess_run(["sudo", "git", "-C", tool_path, "pull"], capture_output=True)
+                except Exception as e:
+                    print(f"{Colors.FAIL}[-] Failed to update {tool_path}: {e}{Colors.ENDC}")
+        
+        print(f"{Colors.OKGREEN}[+] All tools updated!{Colors.ENDC}")
+    except KeyboardInterrupt:
+        print(f"\n{Colors.WARNING}[!] Update process cancelled by user{Colors.ENDC}")
+    except Exception as e:
+        print(f"{Colors.FAIL}[-] Update failed: {e}{Colors.ENDC}")
 
 def list_installed_tools():
     """List all installed tools"""
@@ -4885,7 +5154,99 @@ def {tool_name.lower()}_wrapper():
     print(f"{Colors.OKGREEN}[+] Custom wrapper created: {wrapper_file}{Colors.ENDC}")
     print(f"{Colors.OKBLUE}[*] You can now use this tool in the {category} category{Colors.ENDC}")
 
+# Global variables for cleanup
+running_processes = []
+active_spinners = []
+
+def cleanup_resources():
+    """Clean up all resources before exit"""
+    print(f"{Colors.OKCYAN}[*] Cleaning up resources...{Colors.ENDC}")
+    
+    # Stop all active spinners
+    for spinner in active_spinners[:]:  # Copy list to avoid modification during iteration
+        try:
+            spinner.stop()
+        except Exception:
+            pass
+    
+    # Terminate all running processes
+    for process in running_processes[:]:  # Copy list to avoid modification during iteration
+        try:
+            if process.poll() is None:  # Process is still running
+                print(f"{Colors.OKBLUE}[*] Terminating process: {process.args[0] if hasattr(process, 'args') else 'Unknown'}{Colors.ENDC}")
+                process.terminate()
+                try:
+                    process.wait(timeout=3)  # Wait up to 3 seconds
+                except subprocess.TimeoutExpired:
+                    print(f"{Colors.WARNING}[!] Force killing process{Colors.ENDC}")
+                    process.kill()
+                    process.wait()
+        except Exception as e:
+            print(f"{Colors.FAIL}[-] Error terminating process: {e}{Colors.ENDC}")
+    
+    # Clean up temporary files
+    temp_patterns = [
+        "pentrax_temp_*.txt",
+        "pentrax_scan_*.xml", 
+        "pentrax_output_*.log",
+        "pentrax_hash_*.txt",
+        "pentrax_*.cap",
+        "pentrax_*.pcap",
+        "pentrax_*.csv"
+    ]
+    
+    cleaned_files = 0
+    for pattern in temp_patterns:
+        try:
+            import glob
+            for temp_file in glob.glob(pattern):
+                try:
+                    os.remove(temp_file)
+                    cleaned_files += 1
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    
+    if cleaned_files > 0:
+        print(f"{Colors.OKGREEN}[+] Cleaned up {cleaned_files} temporary files{Colors.ENDC}")
+
+def signal_handler(sig, frame):
+    """Handle CTRL+C gracefully"""
+    print(f"\n\n{Colors.WARNING}[!] Interrupted by user (Ctrl+C){Colors.ENDC}")
+    print(f"{Colors.OKCYAN}[*] Cleaning up and exiting gracefully...{Colors.ENDC}")
+    
+    # Perform cleanup
+    cleanup_resources()
+    
+    # Clear screen and show exit message
+    try:
+        os.system('clear' if os.name == 'posix' else 'cls')
+    except:
+        pass
+    
+    print(f"\n{Colors.OKGREEN}╔══════════════════════════════════════════════════════════════╗{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}║                    PENTRA-X EXIT SUMMARY                    ║{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}╠══════════════════════════════════════════════════════════════╣{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}║  ✓ Graceful shutdown completed                              ║{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}║  ✓ All processes terminated safely                          ║{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}║  ✓ Temporary files cleaned up                              ║{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}╚══════════════════════════════════════════════════════════════╝{Colors.ENDC}")
+    print(f"\n{Colors.OKBLUE}Thank you for using PENTRA-X!{Colors.ENDC}")
+    print(f"{Colors.WARNING}Remember: Use responsibly and ethically.{Colors.ENDC}\n")
+    sys.exit(0)
+
 # Update the main execution to use the new categorized menu system
 if __name__ == "__main__":
-    check_and_prompt_dependencies()
-    main_menu()
+    # Set up signal handler for CTRL+C
+    signal.signal(signal.SIGINT, signal_handler)
+    
+    try:
+        check_and_prompt_dependencies()
+        main_menu()
+    except KeyboardInterrupt:
+        signal_handler(signal.SIGINT, None)
+    except Exception as e:
+        print(f"\n{Colors.FAIL}[!] Unexpected error: {e}{Colors.ENDC}")
+        print(f"{Colors.WARNING}[*] Please report this issue to the developers.{Colors.ENDC}")
+        sys.exit(1)

@@ -1,15 +1,15 @@
-```
 ██████╗ ███████╗███╗   ██╗████████╗██████╗  █████╗ ██╗  ██╗
 ██╔══██╗██╔════╝████╗  ██║╚══██╔══╝██╔══██╗██╔══██╗╚██╗██╔╝
 ██████╔╝█████╗  ██╔██╗ ██║   ██║   ██████╔╝███████║ ╚███╔╝ 
 ██╔═══╝ ██╔══╝  ██║╚██╗██║   ██║   ██╔═══╝ ██╔══██║ ██╔██╗ 
 ██║     ███████╗██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
 ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
-FULL PENTEST TOOLKIT (v1.0)
+              FULL PENTEST TOOLKIT (V1.2.1)
 
-# 🛡️ pentraX - Full Pentesting Toolkit (Linux)
+         Created by astra-incognito
+         GitHub: https://github.com/astra-incognito/
 
----
+# 🛡️ PENTRA-X - Advanced Pentesting Toolkit
 
 > **⚠️ DISCLAIMER:**
 > 
@@ -20,151 +20,361 @@ FULL PENTEST TOOLKIT (v1.0)
 
 ---
 
-## 🏃‍♂️ How to Run (Python & C++ Versions)
+## 🚀 **NEW IN V1.2.1**
 
-### ▶️ Python Version
-1. Ensure you have Python 3 installed.
-2. Run:
-   ```sh
-   python3 pentrax.py
-   ```
-3. The toolkit will auto-install all required tools and wordlists (requires sudo/root).
+### ✨ **Enhanced User Experience**
+- **🎯 Arrow Key Navigation** - Navigate menus with arrow keys (Linux only)
+- **🎨 Colorized Interface** - Beautiful colored menus and output
+- **⚡ Graceful CTRL+C Handling** - Professional exit with cleanup
+- **🔄 Real-time Progress Indicators** - Spinners for long operations
+- **📱 Responsive Design** - Clean, modern interface
 
-### ▶️ C++ Version
-1. Ensure you have a C++ compiler (g++), OpenSSL development libraries, and required system tools installed.
-   - On Ubuntu/Kali/WSL:
-     ```sh
-     sudo apt update
-     sudo apt install g++ libssl-dev
-     ```
-2. Compile the C++ toolkit:
-   ```sh
-   g++ -o pentrax pentrax.cpp -lssl -lcrypto
-   ```
-3. Run the compiled binary:
-   ```sh
-   ./pentrax
-   ```
-4. Run as root or with sudo for full functionality (for features requiring elevated privileges).
+### 🛠️ **Advanced Features**
+- **🔍 Network Enumeration** - Complete network discovery and mapping
+- **🎯 Advanced XSS Testing** - Comprehensive XSS payload testing
+- **📊 OSINT Wordlist Generator** - Customizable password generation
+- **🔧 Tool Management System** - Auto-install, update, and manage tools
+- **📋 Categorized Menu System** - Organized tool categories
+
+### 🛡️ **Security & Stability**
+- **🛡️ Process Management** - Automatic cleanup of running processes
+- **🧹 Resource Cleanup** - Temporary file cleanup on exit
+- **⚡ Interrupt Handling** - Safe cancellation of operations
+- **🔒 Error Recovery** - Robust error handling throughout
 
 ---
 
-## 🚀 Features
-- 🔍 ARP scan, port scan, whois, HTTP headers, hash cracking, DNS/SSL info, subdomain finder, directory brute-force, CVE search
-- 🕵️‍♂️ Nmap, Hydra, SQLMap, SET, fake email spoof, phishing page generator
-- 🧠 OSINT wordlist generator
-- 📡 WiFi analysis and hacking: scan, handshake capture, WPA cracking, deauth, Wifite automation
-- 🦹‍♂️ Advanced MITM (wired & WiFi), Evil Twin, phishing portals, credential/session harvesting
-- 🐍 Reverse shell, msfvenom payloads, persistence, and more!
+## 🏃‍♂️ **Quick Start**
 
-## ⚡ Installation
-1. Clone the repo or copy `pentrax.py` to your Linux machine.
-2. Run: `python3 pentrax.py`
-3. The toolkit will auto-install all required tools and wordlists (requires sudo).
+### **Requirements**
+- Linux system (Kali, Parrot, Ubuntu, etc.)
+- Python 3.7+
+- Root/sudo privileges for full functionality
 
-## 🕹️ Usage
-- Run as root or with sudo for full functionality.
-- Follow the animated menu prompts. Use `99` for next page, `0` for back/exit.
-- Logs and results are saved as `results_*.txt` in the current directory.
+### **Installation & Usage**
+```bash
+# Clone or download the toolkit
+git clone https://github.com/astra-incognito/pentra-x.git
+cd pentra-x
 
-## 🗂️ Menu Structure
-- 1-10: Core network/web tools
-- 11-20: More tools (WiFi, OSINT, social engineering)
-- 21+: Advanced, reverse shell, MITM, WiFi MITM, etc.
-- Use `99` for next page, `0` for back/exit
+# Run the toolkit
+python3 pentrax.py
+```
 
-## 📦 Dependencies
-- Auto-installed: nmap, hydra, sqlmap, gobuster, arp-scan, whois, setoolkit, sendmail, dig, aircrack-ng, wifite, reaver, hcxdumptool, hcxtools, mitmproxy, dsniff, wifiphisher
-- Wordlists: rockyou.txt, dirb/common.txt, subdomains-top1million-5000.txt (auto-downloaded)
-
-## 👨‍💻 Author
-- astra-incognito ([GitHub Profile](https://github.com/astra-incognito/)) 
+The toolkit will automatically:
+- ✅ Check and install dependencies
+- ✅ Set up required tools and wordlists
+- ✅ Configure the environment
+- ✅ Launch the interactive menu
 
 ---
 
-> **Have fun, hack ethically, be a legion!**
+## 🎯 **Core Features**
+
+### **🔍 Network Reconnaissance**
+- **ARP Scanning** - Find live hosts on local network
+- **Port Scanning** - Comprehensive port enumeration
+- **Network Enumeration** - Complete network discovery and mapping
+- **Nmap Integration** - Advanced scanning with custom profiles
+- **Service Detection** - Identify running services and versions
+
+### **🌐 Web Testing & Exploitation**
+- **Directory Bruteforce** - Find hidden directories and files
+- **Advanced XSS Testing** - Multiple payload types and techniques
+- **SQL Injection Testing** - Automated SQLMap integration
+- **Header Analysis** - HTTP response header inspection
+- **SSL Certificate Analysis** - Certificate validation and info
+
+### **📡 Wireless Attacks**
+- **WiFi Scanning** - Discover wireless networks
+- **Handshake Capture** - Capture WPA handshakes
+- **WPA Cracking** - Crack captured handshakes
+- **Deauth Attacks** - Force client reconnection
+- **Evil Twin** - Clone target networks
+- **Wifiphisher Integration** - Advanced WiFi phishing
+
+### **🕵️‍♂️ OSINT & Information Gathering**
+- **Whois Lookup** - Domain registration information
+- **DNS Enumeration** - DNS record analysis
+- **Subdomain Discovery** - Find subdomains of target domains
+- **Social Media OSINT** - Username enumeration across platforms
+- **Custom Wordlist Generation** - OSINT-based password lists
+
+### **🦹‍♂️ Social Engineering**
+- **Phishing Page Generator** - Custom phishing templates
+- **Email Spoofing** - Fake email creation
+- **Advanced Site Cloning** - Clone target websites
+- **Phishing Server Setup** - Apache, Flask, Nginx, Express servers
+- **Template Management** - Banking, social media, corporate templates
+
+### **🔧 Advanced Tools**
+- **Hash Cracking** - SHA256, SHA1, MD5 hash cracking
+- **CVE Search** - Vulnerability database lookup
+- **Reverse Shell Generation** - Multiple payload types
+- **Persistence Scripts** - Post-exploitation persistence
+- **MITM Attacks** - Man-in-the-middle techniques
 
 ---
 
-🌐 **Website:** [https://pentrax.onrender.com](https://pentrax.onrender.com) 
+## 🎮 **Menu Navigation**
 
-# iPhone-Style Stealth Calculator (Red Team Demo)
+### **Arrow Key Navigation (Linux)**
+- **↑/↓** - Navigate menu options
+- **Enter** - Select option
+- **0** - Go back/exit
+- **Ctrl+C** - Graceful exit with cleanup
+
+### **Menu Categories**
+1. **Network Reconnaissance** - Scanning and enumeration tools
+2. **Web Testing & Exploitation** - Web application testing
+3. **Wireless Attacks** - WiFi hacking and analysis
+4. **Social Engineering** - Phishing and social engineering
+5. **Information Gathering** - OSINT and reconnaissance
+6. **Advanced Attacks** - Advanced exploitation techniques
+7. **Tool Management** - Install, update, and manage tools
+
+---
+
+## 🛠️ **Tool Management System**
+
+### **Auto-Installation**
+The toolkit automatically installs and configures:
+- **Core Tools**: nmap, hydra, sqlmap, gobuster, aircrack-ng
+- **Wordlists**: rockyou.txt, dirb/common.txt, subdomains lists
+- **Python Dependencies**: requests, beautifulsoup4, selenium, scapy
+- **GitHub Tools**: BlackEye, SocialFish, HiddenEye, Wifiphisher
+
+### **Tool Updates**
+- **Automatic Updates** - Keep all tools current
+- **Status Checking** - Verify tool functionality
+- **Custom Wrappers** - Create custom tool integrations
+
+---
+
+## 🛡️ **Advanced Security Features**
+
+### **Graceful CTRL+C Handling**
+- **Process Cleanup** - Terminates all running processes
+- **Resource Management** - Cleans up temporary files
+- **Professional Exit** - Beautiful exit summary
+- **No Orphaned Processes** - Complete cleanup on exit
+
+### **Error Recovery**
+- **Robust Error Handling** - Graceful error recovery
+- **Safe Input Handling** - CTRL+C safe user input
+- **Process Monitoring** - Track and manage subprocesses
+- **Resource Tracking** - Monitor spinners and processes
+
+---
+
+## 📊 **Usage Examples**
+
+### **Network Enumeration**
+```bash
+# Run the toolkit
+python3 pentrax.py
+
+# Select "Network Reconnaissance"
+# Choose "Network Enumeration"
+# Enter target network (e.g., 192.168.1.0/24)
+```
+
+### **Web Application Testing**
+```bash
+# Select "Web Testing & Exploitation"
+# Choose "Advanced XSS Testing"
+# Enter target URL
+# Select payload types
+```
+
+### **WiFi Analysis**
+```bash
+# Select "Wireless Attacks"
+# Choose "WiFi Scan"
+# Select interface
+# View discovered networks
+```
+
+---
+
+## 🔧 **Configuration**
+
+### **Custom Wordlists**
+```bash
+# The toolkit automatically downloads and manages wordlists
+# Custom wordlists can be added to /usr/share/wordlists/
+```
+
+### **Tool Integration**
+```bash
+# Custom tools can be integrated via the Tool Management menu
+# Select "Create Custom Tool Wrapper" to add new tools
+```
+
+---
+
+## 📦 **Dependencies**
+
+### **Auto-Installed System Tools**
+- nmap, hydra, sqlmap, gobuster, arp-scan
+- aircrack-ng, wifite, reaver, hcxdumptool
+- whois, dig, setoolkit, bettercap
+- dirb, nikto, whatweb, theharvester
+
+### **Python Dependencies**
+- requests, beautifulsoup4, selenium, scapy
+- cryptography, paramiko, netaddr, dnspython
+- python-nmap, python-whois, shodan
+
+### **GitHub Tools**
+- BlackEye, SocialFish, HiddenEye
+- Wifiphisher, Sherlock, Photon
+- Subfinder, Amass, Nuclei, HTTPX
+
+---
+
+## 🐛 **Troubleshooting**
+
+### **Common Issues**
+1. **Permission Denied** - Run with sudo for full functionality
+2. **Tool Not Found** - Use Tool Management to install missing tools
+3. **Wordlist Missing** - Toolkit auto-downloads required wordlists
+4. **Interface Issues** - Ensure you're on Linux for arrow key navigation
+
+### **Platform Support**
+- **✅ Linux** - Full functionality with arrow key navigation
+- **⚠️ Windows** - Limited functionality (no wireless attacks, arrow keys)
+- **✅ WSL** - Full functionality on Windows Subsystem for Linux
+
+---
+
+## 📝 **Logging & Output**
+
+### **Results Storage**
+- **Scan Results** - Saved as `pentrax_scan_*.xml`
+- **Wordlists** - Generated as `pentrax_wordlist_*.txt`
+- **Logs** - Stored as `pentrax_output_*.log`
+- **Temporary Files** - Auto-cleaned on exit
+
+### **Output Formats**
+- **XML** - Nmap scan results
+- **TXT** - Text-based reports
+- **CSV** - Structured data export
+- **JSON** - API responses and data
+
+---
+
+## 👨‍💻 **Development**
+
+### **Contributing**
+1. Fork the repository
+2. Create a feature branch
+3. Add your improvements
+4. Submit a pull request
+
+### **Code Structure**
+- **Modular Design** - Easy to extend and modify
+- **Clean Architecture** - Well-organized functions
+- **Error Handling** - Comprehensive error management
+- **Documentation** - Inline code documentation
+
+---
+
+## 📄 **License & Legal**
+
+### **Educational Use Only**
+This toolkit is designed for:
+- ✅ Educational purposes
+- ✅ Authorized penetration testing
+- ✅ Security research
+- ✅ Ethical hacking practice
+
+### **Prohibited Uses**
+- ❌ Unauthorized system access
+- ❌ Illegal activities
+- ❌ Malicious attacks
+- ❌ Unethical behavior
+
+---
+
+## 🌟 **Credits & Acknowledgments**
+
+### **Author**
+- **astra-incognito** - Main developer
+- **GitHub**: https://github.com/astra-incognito/
+
+### **Contributors**
+- Open source community
+- Security researchers
+- Penetration testers
+
+### **Tools & Libraries**
+- Nmap, Hydra, SQLMap, Aircrack-ng
+- Python community libraries
+- Open source security tools
+
+---
+
+## 📞 **Support & Community**
+
+### **Getting Help**
+- **GitHub Issues** - Report bugs and request features
+- **Documentation** - Comprehensive inline documentation
+- **Community** - Join security communities
+
+### **Stay Updated**
+- **GitHub** - Latest releases and updates
+- **Security News** - Follow security trends
+- **Tool Updates** - Keep tools current
+
+---
+
+> **🎯 Remember: Use responsibly, hack ethically, be a force for good!**
+
+---
+
+🌐 **Website:** [https://pentrax.onrender.com](https://pentrax.onrender.com)
+📧 **Contact:** [GitHub Profile](https://github.com/astra-incognito/)
+
+---
+
+# 📱 **iPhone-Style Stealth Calculator (Red Team Demo)**
 
 **WARNING: This project is for educational, red team, and authorized penetration testing use only. Unauthorized use is illegal and unethical.**
 
----
-
-## Features
+## 🎯 **Features**
 - **Beautiful iPhone-style calculator UI** (Tkinter, Windows-ready)
-- **Stealth reverse shell**: Triggers when the user presses `+`, connects back to the attacker's machine
-- **Remote kill switch**: Attacker can type `KILL` in the shell to self-destruct the calculator and erase logs
-- **Self-destruction**: Deletes its own executable/script and `.calc_log` file on kill
+- **Stealth reverse shell**: Triggers when the user presses `+`
+- **Remote kill switch**: Attacker can type `KILL` to self-destruct
+- **Self-destruction**: Deletes executable and logs on kill
 - **One-time trigger**: Reverse shell only launches once per run
-- **Logging**: Each trigger is logged to a hidden `.calc_log` file
+- **Logging**: Each trigger is logged to hidden `.calc_log` file
 
----
+## 🚀 **Usage (Red Team / Pentest Demo)**
 
-## Usage (Red Team / Pentest Demo)
+### **1. Configure the Reverse Shell**
+Edit `calculator.py` and set:
+```python
+ATTACKER_IP = "YOUR_KALI_IP"  # <-- Set your Kali IP here
+ATTACKER_PORT = 4444           # <-- Set your desired port here
+```
 
-1. **Configure the Reverse Shell**
-   - Edit `calculator.py` and set:
-     ```python
-     ATTACKER_IP = "YOUR_KALI_IP"  # <-- Set your Kali IP here
-     ATTACKER_PORT = 4444           # <-- Set your desired port here
-     ```
+### **2. Build the Executable (Optional)**
+```bash
+pyinstaller --onefile --noconsole calculator.py
+```
 
-2. **Build the Executable (Optional)**
-   - Use [PyInstaller](https://www.pyinstaller.org/) to create a Windows `.exe`:
-     ```bash
-     pyinstaller --onefile --noconsole calculator.py
-     ```
+### **3. Start Listener on Kali**
+```bash
+nc -lvnp 4444
+```
 
-3. **Start Listener on Kali**
-   - On your Kali machine:
-     ```bash
-     nc -lvnp 4444
-     ```
+### **4. Deploy and Trigger**
+- Run calculator on target Windows PC
+- When user presses `+`, you get shell on Kali terminal
+- Type `KILL` in shell to self-destruct calculator
 
-4. **Deploy the Calculator**
-   - Run the calculator on the target Windows PC.
-   - When the user presses `+`, you get a shell on your Kali terminal.
-
-5. **Remote Kill Switch**
-   - In your shell, type:
-     ```
-     KILL
-     ```
-   - The calculator will self-destruct and exit.
-
----
-
-## How the Attacker Gets Connected
-
-Once the calculator is running on the victim's device, the attacker must:
-
-1. **Start a Listener on Kali**
-   - Open a terminal and run:
-     ```bash
-     nc -lvnp 4444
-     ```
-     (Replace `4444` with the port you set in `ATTACKER_PORT`.)
-
-2. **Wait for the Trigger**
-   - The victim uses the calculator as normal.
-   - When the user presses the `+` button, the reverse shell is triggered and connects back to your Kali machine.
-
-3. **Get the Shell**
-   - As soon as the user presses `+`, you will see a connection in your Netcat terminal.
-   - You now have a command shell on the victim’s machine. Type commands and see the output.
-
-4. **(Optional) Use the Kill Switch**
-   - To self-destruct the calculator remotely, type:
-     ```
-     KILL
-     ```
-     in your shell and press Enter. The calculator will delete itself and its logs, then exit.
-
-### Summary Table
+## 📊 **Summary Table**
 
 | Step                | Action on Attacker (Kali) Side         | Action on Victim Side         |
 |---------------------|----------------------------------------|-------------------------------|
@@ -176,13 +386,13 @@ Once the calculator is running on the victim's device, the attacker must:
 
 ---
 
-## Ethical & Legal Notice
+## ⚖️ **Ethical & Legal Notice**
 - **This project is for educational and authorized security testing only.**
 - Do not use, distribute, or demonstrate this tool without explicit permission.
 - The authors are not responsible for misuse or damages.
 
 ---
 
-## Credits
+## 🏆 **Credits**
 - UI inspired by iPhone Calculator
 - Reverse shell and kill switch for red team/pentest demo scenarios 
