@@ -1,0 +1,26 @@
+[
+  {
+    "type": "WPA",
+    "date": 1751729564,
+    "essid": "AndroidAP",
+    "bssid": "20:64:32:89:73:4F",
+    "key": "qqqqqqqq",
+    "handshake_file": "hs/handshake_AndroidAP_20-64-32-89-73-4F_2025-07-05T15-32-42.cap"
+  },
+  {
+    "type": "WPA",
+    "date": 1751747681,
+    "essid": "Calvin",
+    "bssid": "6E:94:F7:00:80:34",
+    "key": "calvin123",
+    "handshake_file": "hs/handshake_Calvin_6E-94-F7-00-80-34_2025-07-05T20-34-00.cap"
+  },
+  {
+    "type": "WPA",
+    "date": 1751754018,
+    "essid": "HUAWEI Y5p",
+    "bssid": "2A:98:15:FB:B8:98",
+    "key": "00110011",
+    "handshake_file": "hs/handshake_HUAWEIY5p_2A-98-15-FB-B8-98_2025-07-05T22-20-05.cap"
+  }
+]

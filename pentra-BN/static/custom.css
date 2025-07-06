@@ -1,0 +1,30 @@
+body {
+    background: #181a1b;
+    color: #f8f9fa;
+}
+.navbar-brand {
+    font-family: 'Fira Mono', 'Consolas', monospace;
+    letter-spacing: 2px;
+    font-size: 1.5rem;
+}
+.card {
+    border-radius: 0.75rem;
+    box-shadow: 0 2px 8px #000a;
+}
+.table-dark th, .table-dark td {
+    vertical-align: middle;
+}
+.btn-primary {
+    background: linear-gradient(90deg, #007bff 60%, #0056b3 100%);
+    border: none;
+}
+.btn-primary:hover {
+    background: linear-gradient(90deg, #0056b3 60%, #007bff 100%);
+}
+.modal-content {
+    border-radius: 0.5rem;
+}
+.toast {
+    border-radius: 0.5rem;
+    min-width: 250px;
+} 

