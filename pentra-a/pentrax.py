@@ -58,7 +58,7 @@ print()
 
 # Now check platform
 if not sys.platform.startswith('linux'):
-    print("\n[!] PENTRA-X is only supported on Linux. Some features (like arrow-key menus, wireless attacks, and advanced networking) will NOT work on Windows.\nPlease use a Linux system (Kali, Parrot, Ubuntu, etc.) for full functionality.\n")
+    print("\n[!] PENTRA-X is only supported on Linux.\nPlease use a Linux system (Kali, Parrot, Ubuntu, etc.) for full functionality.\n")
     sys.exit(1)
 
 # All other imports below...
