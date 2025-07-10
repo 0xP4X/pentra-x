@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-# pentraX_wsl.py - Full Pentesting Toolkit (WSL Compatible + Social Engineering)
-
+# pentraX_wsl.py - Full Pentesting Toolkit 
 # Minimal imports for logo/disclaimer
 import sys
 import time
@@ -37,8 +35,8 @@ BANNER = f"""
 ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
               FULL PENTEST TOOLKIT (V1.2.1)
 
-         {Colors.BOLD}Created by astra-incognito{Colors.ENDC}{Colors.OKCYAN}
-         GitHub: https://github.com/astra-incognito/
+         {Colors.BOLD}Created by 0xP4X{Colors.ENDC}{Colors.OKCYAN}
+         GitHub: https://github.com/0xP4X/
 """
 
 DISCLAIMER = f"""
