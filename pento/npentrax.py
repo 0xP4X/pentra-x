@@ -79,6 +79,57 @@ from urllib.parse import urlparse
 import re
 from datetime import datetime
 import curses
+import base64
+import getpass
+
+# Import cryptography modules
+try:
+    from Crypto.Cipher import AES
+    from Crypto.Util.Padding import pad, unpad
+except ImportError:
+    print(f"\n{Colors.WARNING}[!] PyCryptodome library not found. Encryption features will be limited.{Colors.ENDC}")
+    print(f"{Colors.OKBLUE}[*] Install with: pip install pycryptodome{Colors.ENDC}")
+    
+    # Simplified alternatives
+    def pad(data, block_size):
+        """PKCS7 padding for AES"""
+        padding_len = block_size - (len(data) % block_size)
+        padding = bytes([padding_len]) * padding_len
+        return data + padding
+        
+    def unpad(data, block_size):
+        """PKCS7 unpadding for AES"""
+        padding_len = data[-1]
+        if padding_len > block_size:
+            raise ValueError("Invalid padding")
+        for i in range(padding_len):
+            if data[-(i+1)] != padding_len:
+                raise ValueError("Invalid padding")
+        return data[:-padding_len]
+        
+    class AESMock:
+        MODE_CBC = 2
+        block_size = 16
+        
+        class NewMock:
+            def __init__(self, key, mode, iv):
+                self.key = key
+                self.mode = mode
+                self.iv = iv
+                
+            def encrypt(self, data):
+                print(f"{Colors.FAIL}[!] AES encryption not available. Install pycryptodome.{Colors.ENDC}")
+                raise NotImplementedError("Encryption requires pycryptodome")
+                
+            def decrypt(self, data):
+                print(f"{Colors.FAIL}[!] AES decryption not available. Install pycryptodome.{Colors.ENDC}")
+                raise NotImplementedError("Decryption requires pycryptodome")
+        
+        @classmethod
+        def new(cls, key, mode, iv):
+            return cls.NewMock(key, mode, iv)
+    
+    AES = AESMock()
 
 def cprint(text, color):
     print(f"{color}{text}{Colors.ENDC}")
@@ -661,6 +712,34 @@ HELP_SECTIONS = {
 
 {Colors.FAIL}DISCLAIMER:{Colors.ENDC}
 The authors and contributors of PENTRA-X are not responsible for any misuse of this software. Users are solely responsible for ensuring they have proper authorization before using these tools.
+"""
+    },
+    "crypto": {
+        "title": "File Encryption & Decryption",
+        "content": f"""
+{Colors.OKBLUE}File Encryption & Decryption Tools:{Colors.ENDC}
+
+{Colors.OKCYAN}1. AES-256 Encryption{Colors.ENDC}
+   • Industry-standard strong encryption
+   • File and directory encryption
+   • Password-based or key-based encryption
+   • Secure key generation
+
+{Colors.OKCYAN}2. Secure Deletion{Colors.ENDC}
+   • Prevent file recovery with secure wiping
+   • Multiple overwrite passes
+   • DoD-compliant data destruction
+
+{Colors.OKCYAN}3. File Hashing{Colors.ENDC}
+   • MD5, SHA-1, SHA-256, SHA-512 hash generation
+   • File integrity verification
+   • Hash comparison and reporting
+
+{Colors.WARNING}Usage Tips:{Colors.ENDC}
+• Keep your encryption passwords secure
+• Use strong, unique passwords for sensitive files
+• Store encryption keys separately from encrypted data
+• Consider key splitting for highly sensitive data
 """
     }
 }
@@ -3167,6 +3246,637 @@ def advanced_ipv6_attacks():
 - This module will perform common IPv6 network attacks (RA spoofing, MITM6, etc.).
 - mitm6 and THC-IPv6 tools will be used if available.
 """)
+
+# File Encryption/Decryption Tools
+def file_crypto_menu():
+    """File encryption and decryption menu"""
+    while True:
+        menu = """
+[File Encryption & Decryption Tools]
+
+1. Encrypt a file (AES-256)
+2. Decrypt a file (AES-256)
+3. Generate encryption key
+4. Hash a file (MD5, SHA1, SHA256)
+5. Encrypt a directory (AES-256)
+6. Decrypt a directory (AES-256)
+7. Secure file deletion (shred)
+0. Return to main menu
+"""
+        print_menu_with_header(menu)
+        choice = input(f"{Colors.OKBLUE}Choose an option: {Colors.ENDC}")
+        
+        if choice == "1":
+            encrypt_file()
+        elif choice == "2":
+            decrypt_file()
+        elif choice == "3":
+            generate_key()
+        elif choice == "4":
+            hash_file()
+        elif choice == "5":
+            encrypt_directory()
+        elif choice == "6":
+            decrypt_directory()
+        elif choice == "7":
+            secure_delete()
+        elif choice == "0":
+            break
+        else:
+            print(f"{Colors.FAIL}Invalid option. Please try again.{Colors.ENDC}")
+
+def encrypt_file():
+    """Encrypt a file using AES-256"""
+    print(f"\n{Colors.OKCYAN}[File Encryption Tool]{Colors.ENDC}")
+    
+    # Validate input
+    file_path = input("Enter path to file to encrypt: ").strip()
+    if not os.path.isfile(file_path):
+        print(f"{Colors.FAIL}[!] File not found: {file_path}{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Get password or key
+    import getpass
+    password = getpass.getpass("Enter encryption password: ")
+    if not password:
+        print(f"{Colors.FAIL}[!] Password cannot be empty{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    confirm = getpass.getpass("Confirm password: ")
+    if password != confirm:
+        print(f"{Colors.FAIL}[!] Passwords do not match{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Output file
+    output_file = input(f"Output file path (default: {file_path}.enc): ").strip() or f"{file_path}.enc"
+    
+    # Create spinner
+    spinner = Spinner("Encrypting file")
+    spinner.start()
+    
+    try:
+        # Generate key from password
+        key = hashlib.sha256(password.encode()).digest()
+        
+        # Generate a random IV (Initialization Vector)
+        iv = get_random_bytes(16)
+        
+        # Create cipher
+        from Crypto.Cipher import AES
+        from Crypto.Util.Padding import pad
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        
+        # Read the file
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        
+        # Pad the data
+        padded_data = pad(data, AES.block_size)
+        
+        # Encrypt the data
+        encrypted_data = cipher.encrypt(padded_data)
+        
+        # Write the encrypted file (IV + encrypted data)
+        with open(output_file, 'wb') as f:
+            f.write(iv)  # First 16 bytes are IV
+            f.write(encrypted_data)
+        
+        spinner.stop(True)
+        print(f"{Colors.OKGREEN}[+] File encrypted successfully: {output_file}{Colors.ENDC}")
+        
+        # Calculate and display file hash for verification
+        sha256_hash = hashlib.sha256(open(output_file, 'rb').read()).hexdigest()
+        print(f"{Colors.OKCYAN}[i] SHA-256 hash of encrypted file: {sha256_hash}{Colors.ENDC}")
+    
+    except Exception as e:
+        spinner.stop(False)
+        print(f"{Colors.FAIL}[!] Encryption failed: {str(e)}{Colors.ENDC}")
+    
+    safe_press_enter()
+
+def decrypt_file():
+    """Decrypt a file encrypted with AES-256"""
+    print(f"\n{Colors.OKCYAN}[File Decryption Tool]{Colors.ENDC}")
+    
+    # Validate input
+    file_path = input("Enter path to encrypted file: ").strip()
+    if not os.path.isfile(file_path):
+        print(f"{Colors.FAIL}[!] File not found: {file_path}{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Get password
+    import getpass
+    password = getpass.getpass("Enter decryption password: ")
+    if not password:
+        print(f"{Colors.FAIL}[!] Password cannot be empty{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Output file - remove .enc extension if present
+    default_output = file_path[:-4] if file_path.endswith('.enc') else f"{file_path}.dec"
+    output_file = input(f"Output file path (default: {default_output}): ").strip() or default_output
+    
+    # Create spinner
+    spinner = Spinner("Decrypting file")
+    spinner.start()
+    
+    try:
+        # Generate key from password
+        key = hashlib.sha256(password.encode()).digest()
+        
+        # Read the file
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        
+        # Extract IV (first 16 bytes) and encrypted data
+        iv = data[:16]
+        encrypted_data = data[16:]
+        
+        # Create cipher
+        from Crypto.Cipher import AES
+        from Crypto.Util.Padding import unpad
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        
+        # Decrypt the data
+        padded_data = cipher.decrypt(encrypted_data)
+        
+        try:
+            # Unpad the data
+            data = unpad(padded_data, AES.block_size)
+            
+            # Write the decrypted file
+            with open(output_file, 'wb') as f:
+                f.write(data)
+            
+            spinner.stop(True)
+            print(f"{Colors.OKGREEN}[+] File decrypted successfully: {output_file}{Colors.ENDC}")
+            
+        except ValueError as e:
+            spinner.stop(False)
+            print(f"{Colors.FAIL}[!] Decryption failed: Invalid padding. Wrong password?{Colors.ENDC}")
+            return
+    
+    except Exception as e:
+        spinner.stop(False)
+        print(f"{Colors.FAIL}[!] Decryption failed: {str(e)}{Colors.ENDC}")
+    
+    safe_press_enter()
+
+def generate_key():
+    """Generate a random encryption key"""
+    print(f"\n{Colors.OKCYAN}[Encryption Key Generator]{Colors.ENDC}")
+    
+    # Get key size
+    print("Choose key size:")
+    print("1. 128-bit (16 bytes)")
+    print("2. 256-bit (32 bytes) - Recommended")
+    print("3. 512-bit (64 bytes)")
+    size_choice = input("Choose key size [2]: ").strip() or "2"
+    
+    if size_choice == "1":
+        key_size = 16  # 128-bit
+    elif size_choice == "2":
+        key_size = 32  # 256-bit
+    elif size_choice == "3":
+        key_size = 64  # 512-bit
+    else:
+        print(f"{Colors.FAIL}[!] Invalid choice. Using 256-bit.{Colors.ENDC}")
+        key_size = 32
+    
+    # Generate key
+    key = get_random_bytes(key_size)
+    import base64
+    hex_key = key.hex()
+    b64_key = base64.b64encode(key).decode('utf-8')
+    
+    # Display key
+    print(f"\n{Colors.OKGREEN}[+] Generated {key_size*8}-bit key:{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}Hex format: {Colors.ENDC}{hex_key}")
+    print(f"{Colors.OKCYAN}Base64 format: {Colors.ENDC}{b64_key}")
+    
+    # Save key to file
+    save_choice = input("\nDo you want to save the key to a file? (y/n) [n]: ").strip().lower() or "n"
+    if save_choice == "y":
+        key_file = input("Enter file path to save key: ").strip()
+        try:
+            with open(key_file, 'w') as f:
+                f.write(f"Key size: {key_size*8}-bit\n")
+                f.write(f"Hex: {hex_key}\n")
+                f.write(f"Base64: {b64_key}\n")
+            print(f"{Colors.OKGREEN}[+] Key saved to: {key_file}{Colors.ENDC}")
+            print(f"{Colors.WARNING}[!] Keep this file secure! Anyone with this key can decrypt your files.{Colors.ENDC}")
+        except Exception as e:
+            print(f"{Colors.FAIL}[!] Failed to save key: {str(e)}{Colors.ENDC}")
+    
+    safe_press_enter()
+
+def hash_file():
+    """Calculate various hashes of a file"""
+    print(f"\n{Colors.OKCYAN}[File Hash Calculator]{Colors.ENDC}")
+    
+    # Validate input
+    file_path = input("Enter path to file: ").strip()
+    if not os.path.isfile(file_path):
+        print(f"{Colors.FAIL}[!] File not found: {file_path}{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Create spinner
+    spinner = Spinner(f"Calculating hashes for {os.path.basename(file_path)}")
+    spinner.start()
+    
+    try:
+        # Calculate file size
+        file_size = os.path.getsize(file_path)
+        
+        # Initialize hash objects
+        md5_hash = hashlib.md5()
+        sha1_hash = hashlib.sha1()
+        sha256_hash = hashlib.sha256()
+        sha512_hash = hashlib.sha512()
+        
+        # Read file in chunks to handle large files
+        with open(file_path, 'rb') as f:
+            while True:
+                chunk = f.read(8192)
+                if not chunk:
+                    break
+                md5_hash.update(chunk)
+                sha1_hash.update(chunk)
+                sha256_hash.update(chunk)
+                sha512_hash.update(chunk)
+        
+        spinner.stop(True)
+        
+        # Display results
+        print(f"\n{Colors.OKCYAN}File: {file_path}{Colors.ENDC}")
+        print(f"{Colors.OKCYAN}Size: {file_size} bytes ({humanize_size(file_size)}){Colors.ENDC}")
+        print(f"\n{Colors.OKGREEN}MD5:    {md5_hash.hexdigest()}{Colors.ENDC}")
+        print(f"{Colors.OKGREEN}SHA-1:   {sha1_hash.hexdigest()}{Colors.ENDC}")
+        print(f"{Colors.OKGREEN}SHA-256: {sha256_hash.hexdigest()}{Colors.ENDC}")
+        print(f"{Colors.OKGREEN}SHA-512: {sha512_hash.hexdigest()}{Colors.ENDC}")
+        
+        # Save hashes to file
+        save_choice = input("\nDo you want to save these hashes to a file? (y/n) [n]: ").strip().lower() or "n"
+        if save_choice == "y":
+            hash_file_path = input("Enter file path to save hashes: ").strip() or f"{file_path}.hashes.txt"
+            try:
+                with open(hash_file_path, 'w') as f:
+                    f.write(f"File: {file_path}\n")
+                    f.write(f"Size: {file_size} bytes ({humanize_size(file_size)})\n")
+                    f.write(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                    f.write(f"MD5:    {md5_hash.hexdigest()}\n")
+                    f.write(f"SHA-1:   {sha1_hash.hexdigest()}\n")
+                    f.write(f"SHA-256: {sha256_hash.hexdigest()}\n")
+                    f.write(f"SHA-512: {sha512_hash.hexdigest()}\n")
+                print(f"{Colors.OKGREEN}[+] Hashes saved to: {hash_file_path}{Colors.ENDC}")
+            except Exception as e:
+                print(f"{Colors.FAIL}[!] Failed to save hashes: {str(e)}{Colors.ENDC}")
+    
+    except Exception as e:
+        spinner.stop(False)
+        print(f"{Colors.FAIL}[!] Hash calculation failed: {str(e)}{Colors.ENDC}")
+    
+    safe_press_enter()
+
+def encrypt_directory():
+    """Encrypt all files in a directory using AES-256"""
+    print(f"\n{Colors.OKCYAN}[Directory Encryption Tool]{Colors.ENDC}")
+    
+    # Validate input
+    dir_path = input("Enter path to directory to encrypt: ").strip()
+    if not os.path.isdir(dir_path):
+        print(f"{Colors.FAIL}[!] Directory not found: {dir_path}{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Get password
+    import getpass
+    password = getpass.getpass("Enter encryption password: ")
+    if not password:
+        print(f"{Colors.FAIL}[!] Password cannot be empty{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    confirm = getpass.getpass("Confirm password: ")
+    if password != confirm:
+        print(f"{Colors.FAIL}[!] Passwords do not match{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Recursion setting
+    recursive = input("Encrypt subdirectories? (y/n) [y]: ").strip().lower() or "y"
+    is_recursive = recursive == "y"
+    
+    # Get list of files
+    if is_recursive:
+        files = []
+        for root, _, filenames in os.walk(dir_path):
+            for filename in filenames:
+                files.append(os.path.join(root, filename))
+    else:
+        files = [os.path.join(dir_path, f) for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
+    
+    if not files:
+        print(f"{Colors.WARNING}[!] No files found in directory{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Generate key from password
+    key = hashlib.sha256(password.encode()).digest()
+    
+    # Create progress bar
+    total_files = len(files)
+    progress = ProgressBar(total_files, "Encrypting files")
+    
+    successful = 0
+    failed = 0
+    
+    # Encrypt each file
+    from Crypto.Cipher import AES
+    from Crypto.Util.Padding import pad
+    for file_path in files:
+        try:
+            # Generate a random IV
+            iv = get_random_bytes(16)
+            
+            # Create cipher
+            cipher = AES.new(key, AES.MODE_CBC, iv)
+            
+            # Read the file
+            with open(file_path, 'rb') as f:
+                data = f.read()
+            
+            # Pad the data
+            padded_data = pad(data, AES.block_size)
+            
+            # Encrypt the data
+            encrypted_data = cipher.encrypt(padded_data)
+            
+            # Write the encrypted file (IV + encrypted data)
+            with open(f"{file_path}.enc", 'wb') as f:
+                f.write(iv)  # First 16 bytes are IV
+                f.write(encrypted_data)
+            
+            successful += 1
+            
+        except Exception as e:
+            print(f"{Colors.FAIL}[!] Failed to encrypt {file_path}: {str(e)}{Colors.ENDC}")
+            failed += 1
+        
+        progress.update()
+    
+    progress.finish()
+    
+    print(f"\n{Colors.OKGREEN}[+] Encryption complete:{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}    Successfully encrypted: {successful} files{Colors.ENDC}")
+    
+    if failed > 0:
+        print(f"{Colors.FAIL}    Failed to encrypt: {failed} files{Colors.ENDC}")
+    
+    # Delete original files
+    if successful > 0:
+        delete_choice = input("\nDo you want to delete the original files? (y/n) [n]: ").strip().lower() or "n"
+        if delete_choice == "y":
+            secure_choice = input("Use secure deletion (slower but safer)? (y/n) [n]: ").strip().lower() or "n"
+            use_secure = secure_choice == "y"
+            
+            deleted = 0
+            failed_delete = 0
+            
+            for file_path in files:
+                if os.path.exists(f"{file_path}.enc"):  # Only delete if encryption succeeded
+                    try:
+                        if use_secure and shutil.which("shred"):
+                            # Use shred for secure deletion if available
+                            subprocess.run(["shred", "-zu", file_path], check=True)
+                        else:
+                            # Regular deletion
+                            os.unlink(file_path)
+                        deleted += 1
+                    except Exception as e:
+                        print(f"{Colors.FAIL}[!] Failed to delete {file_path}: {str(e)}{Colors.ENDC}")
+                        failed_delete += 1
+            
+            print(f"{Colors.OKGREEN}[+] Deleted {deleted} original files{Colors.ENDC}")
+            if failed_delete > 0:
+                print(f"{Colors.FAIL}[!] Failed to delete {failed_delete} files{Colors.ENDC}")
+    
+    safe_press_enter()
+
+def decrypt_directory():
+    """Decrypt all encrypted files in a directory"""
+    print(f"\n{Colors.OKCYAN}[Directory Decryption Tool]{Colors.ENDC}")
+    
+    # Validate input
+    dir_path = input("Enter path to directory with encrypted files: ").strip()
+    if not os.path.isdir(dir_path):
+        print(f"{Colors.FAIL}[!] Directory not found: {dir_path}{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Get password
+    import getpass
+    password = getpass.getpass("Enter decryption password: ")
+    if not password:
+        print(f"{Colors.FAIL}[!] Password cannot be empty{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Recursion setting
+    recursive = input("Decrypt subdirectories? (y/n) [y]: ").strip().lower() or "y"
+    is_recursive = recursive == "y"
+    
+    # Get list of encrypted files
+    if is_recursive:
+        encrypted_files = []
+        for root, _, filenames in os.walk(dir_path):
+            for filename in filenames:
+                if filename.endswith('.enc'):
+                    encrypted_files.append(os.path.join(root, filename))
+    else:
+        encrypted_files = [os.path.join(dir_path, f) for f in os.listdir(dir_path) 
+                          if os.path.isfile(os.path.join(dir_path, f)) and f.endswith('.enc')]
+    
+    if not encrypted_files:
+        print(f"{Colors.WARNING}[!] No encrypted files (*.enc) found in directory{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Generate key from password
+    key = hashlib.sha256(password.encode()).digest()
+    
+    # Create progress bar
+    total_files = len(encrypted_files)
+    progress = ProgressBar(total_files, "Decrypting files")
+    
+    successful = 0
+    failed = 0
+    
+    # Decrypt each file
+    from Crypto.Cipher import AES
+    from Crypto.Util.Padding import unpad
+    for file_path in encrypted_files:
+        try:
+            # Determine output filename (remove .enc extension)
+            output_file = file_path[:-4]  # Remove .enc
+            
+            # Read the encrypted file
+            with open(file_path, 'rb') as f:
+                data = f.read()
+            
+            # Extract IV and encrypted data
+            iv = data[:16]
+            encrypted_data = data[16:]
+            
+            # Create cipher
+            cipher = AES.new(key, AES.MODE_CBC, iv)
+            
+            # Decrypt the data
+            try:
+                padded_data = cipher.decrypt(encrypted_data)
+                data = unpad(padded_data, AES.block_size)
+                
+                # Write the decrypted file
+                with open(output_file, 'wb') as f:
+                    f.write(data)
+                
+                successful += 1
+                
+            except ValueError:
+                print(f"{Colors.FAIL}[!] Failed to decrypt {file_path}: Invalid padding. Wrong password?{Colors.ENDC}")
+                failed += 1
+                continue
+            
+        except Exception as e:
+            print(f"{Colors.FAIL}[!] Failed to decrypt {file_path}: {str(e)}{Colors.ENDC}")
+            failed += 1
+        
+        progress.update()
+    
+    progress.finish()
+    
+    print(f"\n{Colors.OKGREEN}[+] Decryption complete:{Colors.ENDC}")
+    print(f"{Colors.OKGREEN}    Successfully decrypted: {successful} files{Colors.ENDC}")
+    
+    if failed > 0:
+        print(f"{Colors.FAIL}    Failed to decrypt: {failed} files{Colors.ENDC}")
+    
+    # Delete encrypted files
+    if successful > 0:
+        delete_choice = input("\nDo you want to delete the encrypted files? (y/n) [n]: ").strip().lower() or "n"
+        if delete_choice == "y":
+            deleted = 0
+            failed_delete = 0
+            
+            for file_path in encrypted_files:
+                output_file = file_path[:-4]  # Remove .enc
+                if os.path.exists(output_file):  # Only delete if decryption succeeded
+                    try:
+                        os.unlink(file_path)
+                        deleted += 1
+                    except Exception as e:
+                        print(f"{Colors.FAIL}[!] Failed to delete {file_path}: {str(e)}{Colors.ENDC}")
+                        failed_delete += 1
+            
+            print(f"{Colors.OKGREEN}[+] Deleted {deleted} encrypted files{Colors.ENDC}")
+            if failed_delete > 0:
+                print(f"{Colors.FAIL}[!] Failed to delete {failed_delete} files{Colors.ENDC}")
+    
+    safe_press_enter()
+
+def secure_delete():
+    """Securely delete a file to prevent recovery"""
+    print(f"\n{Colors.OKCYAN}[Secure File Deletion Tool]{Colors.ENDC}")
+    
+    # Validate input
+    file_path = input("Enter path to file to securely delete: ").strip()
+    if not os.path.isfile(file_path):
+        print(f"{Colors.FAIL}[!] File not found: {file_path}{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Confirm deletion
+    filename = os.path.basename(file_path)
+    confirm = input(f"{Colors.WARNING}[!] Are you sure you want to securely delete '{filename}'? This cannot be undone! (y/n): {Colors.ENDC}").strip().lower()
+    if confirm != "y":
+        print(f"{Colors.OKBLUE}[*] Operation cancelled{Colors.ENDC}")
+        safe_press_enter()
+        return
+    
+    # Check if shred is available (Linux)
+    if shutil.which("shred"):
+        print(f"{Colors.OKBLUE}[*] Using 'shred' for secure deletion...{Colors.ENDC}")
+        try:
+            # -z: Add final overwrite with zeros to hide shredding
+            # -u: Delete file after overwriting
+            # -n 7: Overwrite 7 times
+            result = subprocess.run(["shred", "-zun", "7", file_path], 
+                                   capture_output=True, text=True, check=True)
+            print(f"{Colors.OKGREEN}[+] File securely deleted: {file_path}{Colors.ENDC}")
+        except subprocess.CalledProcessError as e:
+            print(f"{Colors.FAIL}[!] Secure deletion failed: {e.stderr}{Colors.ENDC}")
+            safe_press_enter()
+            return
+    else:
+        # Manual secure deletion
+        print(f"{Colors.OKBLUE}[*] 'shred' not found. Using manual secure deletion...{Colors.ENDC}")
+        
+        try:
+            # Get file size
+            file_size = os.path.getsize(file_path)
+            
+            # Create spinner
+            spinner = Spinner("Securely wiping file")
+            spinner.start()
+            
+            # Open file for binary write
+            with open(file_path, 'r+b') as f:
+                # Multiple overwrite passes with different patterns
+                patterns = [
+                    b'\x00', b'\xFF', b'\xAA', b'\x55',
+                    os.urandom(1024), os.urandom(1024), os.urandom(1024)
+                ]
+                
+                for i, pattern in enumerate(patterns):
+                    f.seek(0)
+                    pattern_chunk = pattern * ((file_size // len(pattern)) + 1)
+                    pattern_chunk = pattern_chunk[:file_size]
+                    f.write(pattern_chunk)
+                    f.flush()
+                    os.fsync(f.fileno())  # Ensure data is written to disk
+            
+            # Delete the file
+            os.unlink(file_path)
+            
+            spinner.stop(True)
+            print(f"{Colors.OKGREEN}[+] File securely deleted: {file_path}{Colors.ENDC}")
+            
+        except Exception as e:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.FAIL}[!] Secure deletion failed: {str(e)}{Colors.ENDC}")
+    
+    safe_press_enter()
+
+def humanize_size(size):
+    """Convert size in bytes to human-readable format"""
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size < 1024.0:
+            return f"{size:.2f} {unit}"
+        size /= 1024.0
+    return f"{size:.2f} PB"
+
+def get_random_bytes(length):
+    """Generate cryptographically secure random bytes"""
+    return os.urandom(length)
+
 # Minimal imports for logo/disclaimer
 import sys
 import time
@@ -8941,6 +9651,15 @@ categorized_menus = {
         ("6. Advanced IPv6 Attacks", advanced_ipv6_attacks),
     ],
     
+    "File Encryption & Security": [
+        ("1. File Encryption/Decryption Tools", file_crypto_menu),
+        ("2. Secure File Deletion", secure_delete),
+        ("3. File Hash Calculator", hash_file),
+        ("4. Generate Encryption Keys", generate_key),
+        ("5. Directory Encryption", encrypt_directory),
+        ("6. Directory Decryption", decrypt_directory),
+    ],
+    
     "Information Gathering": [
         ("1. Whois Lookup", whois_wrapper),
         ("2. DNS Lookup", dns_wrapper),
@@ -8969,6 +9688,7 @@ main_categories = [
     "Social Engineering",
     "Password Attacks",
     "MITM & Network Attacks",
+    "File Encryption & Security",
     "Information Gathering",
     "Post Exploitation",
     "Help & Documentation"
