@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Minimal imports for logo/disclaimer
 import sys
 import time
