@@ -3247,10 +3247,359 @@ def advanced_ipv6_attacks():
 - mitm6 and THC-IPv6 tools will be used if available.
 """)
 
+def crack_zip_password():
+    """Crack password-protected ZIP files using various methods"""
+    print(f"\n{Colors.OKCYAN}[ZIP Password Cracker]{Colors.ENDC}")
+    print("""
+This module attempts to crack password-protected ZIP files using:
+- fcrackzip (brute force/dictionary)
+- John the Ripper with zip2john (dictionary)
+- hashcat (GPU-accelerated dictionary/mask)
+
+Note: Success depends on the encryption method and password complexity.
+- ZIPCrypto (legacy): Often crackable with these tools
+- AES-256: Very difficult if the password is strong
+    """)
+    
+    # Get the ZIP file
+    zip_file = input("Enter path to the ZIP file: ").strip()
+    if not os.path.isfile(zip_file):
+        print(f"{Colors.FAIL}[!] File not found: {zip_file}{Colors.ENDC}")
+        safe_press_enter()
+        return
+        
+    # Check if the ZIP is password-protected
+    try:
+        # Try to open with zipfile module to check if it's encrypted
+        import zipfile
+        with zipfile.ZipFile(zip_file) as zf:
+            for file_info in zf.infolist():
+                if file_info.flag_bits & 0x1:
+                    # File is encrypted
+                    print(f"{Colors.OKBLUE}[+] Confirmed: ZIP file is password-protected{Colors.ENDC}")
+                    break
+            else:
+                # No encrypted files found
+                print(f"{Colors.WARNING}[!] This ZIP file doesn't appear to be password protected.{Colors.ENDC}")
+                retry = input("Continue anyway? (y/n): ").strip().lower()
+                if retry != 'y':
+                    return
+    except zipfile.BadZipFile:
+        print(f"{Colors.WARNING}[!] The file appears to be corrupted or not a valid ZIP file.{Colors.ENDC}")
+        retry = input("Continue anyway? (y/n): ").strip().lower()
+        if retry != 'y':
+            return
+    except Exception as e:
+        print(f"{Colors.WARNING}[!] Couldn't verify ZIP encryption: {str(e)}{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] Will attempt to crack anyway.{Colors.ENDC}")
+    
+    # Choose cracking method
+    print("\nSelect cracking method:")
+    print("1. Dictionary attack (try passwords from a wordlist)")
+    print("2. Brute force attack (try all possible combinations - very slow)")
+    print("3. Try all methods sequentially (recommended)")
+    crack_method = input("Select option [3]: ").strip() or "3"
+    
+    # Get wordlist for dictionary attack
+    wordlist = input("\nWordlist path (default /usr/share/wordlists/rockyou.txt): ").strip() or "/usr/share/wordlists/rockyou.txt"
+    if not os.path.isfile(wordlist) and (crack_method == "1" or crack_method == "3"):
+        print(f"{Colors.WARNING}[!] Wordlist not found: {wordlist}{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] You may need to install or extract it.{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] On Kali Linux, run: sudo gunzip /usr/share/wordlists/rockyou.txt.gz{Colors.ENDC}")
+        wordlist_continue = input("Continue with potentially missing wordlist? (y/n): ").strip().lower()
+        if wordlist_continue != 'y':
+            return
+    
+    # For brute force attack
+    if crack_method == "2" or crack_method == "3":
+        min_length = input("Minimum password length for brute force [4]: ").strip() or "4"
+        max_length = input("Maximum password length for brute force [8]: ").strip() or "8"
+        charset = input("Character set (1=a-z, 2=a-z0-9, 3=all) [2]: ").strip() or "2"
+        
+        try:
+            min_length = int(min_length)
+            max_length = int(max_length)
+            charset = int(charset)
+        except ValueError:
+            print(f"{Colors.FAIL}[!] Invalid input. Using defaults.{Colors.ENDC}")
+            min_length = 4
+            max_length = 8
+            charset = 2
+            
+    # Prepare hash file for John/hashcat
+    hash_file = f"{zip_file}.hash"
+    print(f"\n{Colors.OKBLUE}[*] Extracting hash from ZIP file...{Colors.ENDC}")
+    
+    # Check for zip2john
+    if shutil.which("zip2john"):
+        try:
+            with open(hash_file, 'w') as hf:
+                subprocess.run(["zip2john", zip_file], stdout=hf, stderr=subprocess.DEVNULL)
+            print(f"{Colors.OKGREEN}[+] Hash extracted successfully{Colors.ENDC}")
+        except Exception as e:
+            print(f"{Colors.FAIL}[!] Failed to extract hash: {str(e)}{Colors.ENDC}")
+            hash_extracted = False
+        else:
+            hash_extracted = True
+    else:
+        print(f"{Colors.WARNING}[!] zip2john not found. John the Ripper method unavailable.{Colors.ENDC}")
+        hash_extracted = False
+    
+    # Initialize result
+    password_found = False
+    password = None
+    
+    # Method 1: fcrackzip
+    if crack_method in ["1", "3"] and shutil.which("fcrackzip"):
+        print(f"\n{Colors.OKBLUE}[*] Trying fcrackzip with dictionary attack...{Colors.ENDC}")
+        try:
+            spinner = Spinner("Running fcrackzip dictionary attack")
+            spinner.start()
+            
+            # Run fcrackzip with dictionary
+            result = subprocess.run(
+                ["fcrackzip", "-u", "-D", "-p", wordlist, zip_file],
+                capture_output=True, text=True
+            )
+            
+            spinner.stop()
+            
+            # Check if password was found
+            for line in result.stdout.splitlines():
+                if "PASSWORD FOUND" in line:
+                    password = line.split("PASSWORD FOUND!!!!: pw == ")[1].strip()
+                    print(f"{Colors.OKGREEN}[+] Password found by fcrackzip: {password}{Colors.ENDC}")
+                    password_found = True
+                    break
+            
+            if not password_found:
+                print(f"{Colors.WARNING}[!] fcrackzip dictionary attack failed to find the password{Colors.ENDC}")
+            
+        except Exception as e:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.FAIL}[!] fcrackzip error: {str(e)}{Colors.ENDC}")
+    
+    # Method 2: John the Ripper (if password not found yet)
+    if not password_found and crack_method in ["1", "3"] and shutil.which("john") and hash_extracted:
+        print(f"\n{Colors.OKBLUE}[*] Trying John the Ripper with dictionary attack...{Colors.ENDC}")
+        try:
+            spinner = Spinner("Running John the Ripper dictionary attack")
+            spinner.start()
+            
+            # Run John with wordlist
+            subprocess.run(
+                ["john", "--wordlist=" + wordlist, hash_file],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            
+            # Get cracked password
+            result = subprocess.run(
+                ["john", "--show", hash_file],
+                capture_output=True, text=True
+            )
+            
+            spinner.stop()
+            
+            # Parse John's output
+            if "password hashes cracked" in result.stdout and "0 password hashes cracked" not in result.stdout:
+                for line in result.stdout.splitlines():
+                    if line and ":" in line and not line.startswith("0 password"):
+                        password = line.split(":")[1].strip()
+                        print(f"{Colors.OKGREEN}[+] Password found by John the Ripper: {password}{Colors.ENDC}")
+                        password_found = True
+                        break
+            
+            if not password_found:
+                print(f"{Colors.WARNING}[!] John the Ripper dictionary attack failed to find the password{Colors.ENDC}")
+                
+        except Exception as e:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.FAIL}[!] John the Ripper error: {str(e)}{Colors.ENDC}")
+    
+    # Method 3: hashcat (if password not found yet)
+    if not password_found and crack_method in ["1", "3"] and shutil.which("hashcat") and hash_extracted:
+        print(f"\n{Colors.OKBLUE}[*] Trying hashcat with dictionary attack...{Colors.ENDC}")
+        try:
+            spinner = Spinner("Running hashcat dictionary attack")
+            spinner.start()
+            
+            # Run hashcat with wordlist
+            # Mode 13600 is for ZIP passwords
+            subprocess.run(
+                ["hashcat", "-m", "13600", "-a", "0", hash_file, wordlist],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            
+            # Check if cracked
+            result = subprocess.run(
+                ["hashcat", "-m", "13600", "--show", hash_file],
+                capture_output=True, text=True
+            )
+            
+            spinner.stop()
+            
+            # Parse hashcat output
+            if result.stdout.strip():
+                for line in result.stdout.splitlines():
+                    if line and ":" in line:
+                        password = line.split(":")[-1].strip()
+                        print(f"{Colors.OKGREEN}[+] Password found by hashcat: {password}{Colors.ENDC}")
+                        password_found = True
+                        break
+            
+            if not password_found:
+                print(f"{Colors.WARNING}[!] Hashcat dictionary attack failed to find the password{Colors.ENDC}")
+                
+        except Exception as e:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.FAIL}[!] Hashcat error: {str(e)}{Colors.ENDC}")
+    
+    # Method 4: Brute force with fcrackzip (if password not found yet)
+    if not password_found and crack_method in ["2", "3"] and shutil.which("fcrackzip"):
+        print(f"\n{Colors.OKBLUE}[*] Trying fcrackzip with brute force attack...{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] Warning: Brute force can take a very long time depending on settings{Colors.ENDC}")
+        
+        # Define character set
+        if charset == 1:
+            charset_str = "a"  # a-z
+        elif charset == 3:
+            charset_str = "A"  # all characters
+        else:
+            charset_str = "1"  # a-z0-9
+            
+        try:
+            spinner = Spinner("Running fcrackzip brute force attack")
+            spinner.start()
+            
+            # Run fcrackzip with brute force
+            result = subprocess.run(
+                ["fcrackzip", "-u", "-c", charset_str, "-l", str(min_length) + "-" + str(max_length), zip_file],
+                capture_output=True, text=True, timeout=300  # 5-minute timeout
+            )
+            
+            spinner.stop()
+            
+            # Check if password was found
+            for line in result.stdout.splitlines():
+                if "PASSWORD FOUND" in line:
+                    password = line.split("PASSWORD FOUND!!!!: pw == ")[1].strip()
+                    print(f"{Colors.OKGREEN}[+] Password found by fcrackzip brute force: {password}{Colors.ENDC}")
+                    password_found = True
+                    break
+            
+            if not password_found:
+                print(f"{Colors.WARNING}[!] Brute force attack failed to find the password in the time limit{Colors.ENDC}")
+                
+        except subprocess.TimeoutExpired:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.WARNING}[!] Brute force attack timed out after 5 minutes{Colors.ENDC}")
+        except Exception as e:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.FAIL}[!] fcrackzip brute force error: {str(e)}{Colors.ENDC}")
+    
+    # Summary
+    if password_found:
+        print(f"\n{Colors.OKGREEN}[+] SUCCESS! Password found: {password}{Colors.ENDC}")
+        
+        # Offer to extract the ZIP with the found password
+        extract = input("Extract the ZIP file with this password? (y/n): ").strip().lower()
+        if extract == 'y':
+            extract_dir = input("Extract to directory (default: extracted_zip): ").strip() or "extracted_zip"
+            
+            if not os.path.exists(extract_dir):
+                os.makedirs(extract_dir)
+                
+            print(f"{Colors.OKBLUE}[*] Extracting ZIP to {extract_dir}...{Colors.ENDC}")
+            
+            try:
+                # Use 7z for extraction if available (better handling of various ZIP formats)
+                if shutil.which("7z"):
+                    subprocess.run(["7z", "x", "-o" + extract_dir, "-p" + password, zip_file])
+                    print(f"{Colors.OKGREEN}[+] Extraction completed successfully{Colors.ENDC}")
+                else:
+                    # Fall back to Python's zipfile
+                    with zipfile.ZipFile(zip_file) as zf:
+                        zf.extractall(path=extract_dir, pwd=password.encode())
+                    print(f"{Colors.OKGREEN}[+] Extraction completed successfully{Colors.ENDC}")
+            except Exception as e:
+                print(f"{Colors.FAIL}[!] Extraction failed: {str(e)}{Colors.ENDC}")
+    else:
+        print(f"\n{Colors.FAIL}[!] Failed to find the password with all methods{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] Possible reasons:{Colors.ENDC}")
+        print(f"{Colors.WARNING}  - The password is not in the wordlist{Colors.ENDC}")
+        print(f"{Colors.WARNING}  - The password is too complex for the brute force settings{Colors.ENDC}")
+        print(f"{Colors.WARNING}  - The ZIP uses strong encryption (AES-256){Colors.ENDC}")
+        print(f"{Colors.WARNING}  - The ZIP file is corrupted{Colors.ENDC}")
+        
+        print(f"\n{Colors.OKBLUE}Tips for successful ZIP cracking:{Colors.ENDC}")
+        print(f"{Colors.OKBLUE}  - Try a larger wordlist (e.g., download larger ones from online sources){Colors.ENDC}")
+        print(f"{Colors.OKBLUE}  - For targeted attacks, create a custom wordlist with common words related to the target{Colors.ENDC}")
+        print(f"{Colors.OKBLUE}  - For better performance with hashcat, use a system with a powerful GPU{Colors.ENDC}")
+    
+    # Clean up hash file
+    if os.path.exists(hash_file):
+        try:
+            os.remove(hash_file)
+        except:
+            pass
+            
+    safe_press_enter()
+
 # File Encryption/Decryption Tools
 def file_crypto_menu():
     """File encryption and decryption menu"""
     while True:
+        menu = """
+[File Encryption & Decryption Tools]
+
+1. Encrypt a file (AES-256)
+2. Decrypt a file (AES-256)
+3. Generate encryption key
+4. Hash a file (MD5, SHA1, SHA256)
+5. Encrypt a directory (AES-256)
+6. Decrypt a directory (AES-256)
+7. Secure file deletion (shred)
+8. Crack ZIP password
+0. Return to main menu
+"""
+        print_menu_with_header(menu)
+        choice = input(f"{Colors.OKBLUE}Choose an option: {Colors.ENDC}")
+        
+        if choice == "1":
+            encrypt_file()
+        elif choice == "2":
+            decrypt_file()
+        elif choice == "3":
+            generate_key()
+        elif choice == "4":
+            hash_file()
+        elif choice == "5":
+            encrypt_directory()
+        elif choice == "6":
+            decrypt_directory()
+        elif choice == "7":
+            secure_delete()
+        elif choice == "8":
+            crack_zip_password()
+        elif choice == "0":
+            break
+        else:
+            print(f"{Colors.FAIL}Invalid option. Please try again.{Colors.ENDC}")
         menu = """
 [File Encryption & Decryption Tools]
 
@@ -9650,14 +9999,14 @@ categorized_menus = {
         ("5. Advanced SNMP Enumeration", advanced_snmp_enum),
         ("6. Advanced IPv6 Attacks", advanced_ipv6_attacks),
     ],
-    
-    "File Encryption & Security": [
+      "File Encryption & Security": [
         ("1. File Encryption/Decryption Tools", file_crypto_menu),
         ("2. Secure File Deletion", secure_delete),
         ("3. File Hash Calculator", hash_file),
         ("4. Generate Encryption Keys", generate_key),
         ("5. Directory Encryption", encrypt_directory),
         ("6. Directory Decryption", decrypt_directory),
+        ("7. Crack ZIP Password", crack_zip_password),
     ],
     
     "Information Gathering": [
