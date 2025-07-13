@@ -7107,6 +7107,10 @@ def advanced_ipv6_attacks():
         print("[!] No supported IPv6 attack tool found. Please install mitm6 or THC-IPv6.")
         print("[!] mitm6: pip install mitm6 | THC-IPv6: sudo apt install thc-ipv6")
 
+def hidrax_chat_system():
+    print("Starting HidraX chat system...")
+    subprocess.run(["python3", "hidrax.py"])
+
 # --- END ADVANCED ATTACK MODULES ---
 
 # Wrapper functions for core menu options
@@ -9465,187 +9469,6 @@ def bluetooth_scan():
     
     input(f"\n{Colors.OKCYAN}[Press Enter to return to the menu]{Colors.ENDC}")
 
-def anonymous_chat_system():
-    """Anonymous encrypted chat and messaging system"""
-    print(f"{Colors.OKCYAN}[+] Anonymous Hacker Chat System{Colors.ENDC}")
-    print("Secure, encrypted, anonymous communication platform.")
-    
-    # Generate random username
-    adjectives = ["Shadow", "Phantom", "Ghost", "Void", "Dark", "Stealth", "Cipher", "Crypt", "Hack", "Byte"]
-    nouns = ["Runner", "Walker", "Hacker", "Phantom", "Ghost", "Shadow", "Cipher", "Crypt", "Byte", "Code"]
-    username = f"{random.choice(adjectives)}{random.choice(nouns)}{random.randint(100, 999)}"
-    
-    print(f"{Colors.OKGREEN}[+] Your anonymous username: {username}{Colors.ENDC}")
-    print(f"{Colors.OKBLUE}[*] All messages are encrypted and anonymous{Colors.ENDC}")
-    
-    # Chat rooms
-    chat_rooms = {
-        "general": "General Discussion",
-        "hacking": "Hacking & Security",
-        "tools": "Tool Discussion", 
-        "news": "Security News",
-        "random": "Random Chat"
-    }
-    
-    # Simulated chat messages
-    simulated_users = [
-        "ShadowByte", "PhantomHack", "GhostRunner", "VoidCipher", "DarkCrypt",
-        "StealthWalker", "CipherPhantom", "CryptGhost", "HackShadow", "ByteRunner"
-    ]
-    
-    simulated_messages = [
-        "Anyone tried the new nmap scripts?",
-        "Just discovered a new 0-day in the wild",
-        "What's your favorite pentesting distro?",
-        "Anyone here from DEF CON?",
-        "New tool released: check it out",
-        "Security conference next month",
-        "Anyone working on IoT security?",
-        "Latest CVE is pretty serious",
-        "What's your go-to recon tool?",
-        "Anyone here a bug bounty hunter?"
-    ]
-    
-    def xor_encrypt(text, key):
-        """Simple XOR encryption for demonstration"""
-        return ''.join(chr(ord(c) ^ ord(key[i % len(key)])) for i, c in enumerate(text))
-    
-    def xor_decrypt(text, key):
-        """Simple XOR decryption for demonstration"""
-        return xor_encrypt(text, key)  # XOR is symmetric
-    
-    def send_message(room, message):
-        """Send encrypted message to chat room"""
-        # Encrypt message
-        key = "PENTRAX2024"
-        encrypted = xor_encrypt(message, key)
-        
-        # Simulate message broadcast
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        print(f"{Colors.OKGREEN}[{timestamp}] {username}: {message}{Colors.ENDC}")
-        
-        # Simulate other users responding
-        if random.random() < 0.3:  # 30% chance of response
-            other_user = random.choice(simulated_users)
-            other_message = random.choice(simulated_messages)
-            print(f"{Colors.OKCYAN}[{timestamp}] {other_user}: {other_message}{Colors.ENDC}")
-        
-        return True
-    
-    def show_chat_room(room_name):
-        """Display chat room interface"""
-        room_display = chat_rooms.get(room_name, "Unknown Room")
-        print(f"\n{Colors.OKCYAN}=== {room_display} ==={Colors.ENDC}")
-        print(f"{Colors.OKBLUE}[*] Room: {room_name} | User: {username}{Colors.ENDC}")
-        print(f"{Colors.WARNING}[*] Type 'exit' to leave room, 'users' to see online users{Colors.ENDC}")
-        print(f"{Colors.WARNING}[*] Type 'help' for commands{Colors.ENDC}")
-        print("-" * 50)
-        
-        # Show some recent messages
-        for _ in range(3):
-            other_user = random.choice(simulated_users)
-            other_message = random.choice(simulated_messages)
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            print(f"{Colors.OKCYAN}[{timestamp}] {other_user}: {other_message}{Colors.ENDC}")
-        
-        while True:
-            try:
-                message = input(f"{Colors.OKGREEN}{username} > {Colors.ENDC}").strip()
-                
-                if message.lower() == 'exit':
-                    print(f"{Colors.OKBLUE}[*] Leaving {room_display}...{Colors.ENDC}")
-                    break
-                elif message.lower() == 'users':
-                    print(f"{Colors.OKCYAN}[*] Online users in {room_display}:{Colors.ENDC}")
-                    online_users = [username] + random.sample(simulated_users, random.randint(3, 8))
-                    for user in online_users:
-                        status = "🟢" if user == username else "🟢"
-                        print(f"  {status} {user}")
-                elif message.lower() == 'help':
-                    print(f"{Colors.OKCYAN}[*] Chat Commands:{Colors.ENDC}")
-                    print("  exit - Leave current room")
-                    print("  users - Show online users")
-                    print("  help - Show this help")
-                    print("  clear - Clear screen")
-                    print("  /whisper <user> <message> - Private message")
-                    print("  /me <action> - Action message")
-                elif message.lower() == 'clear':
-                    os.system('clear')
-                    print(f"{Colors.OKCYAN}=== {room_display} ==={Colors.ENDC}")
-                elif message.startswith('/whisper '):
-                    parts = message.split(' ', 2)
-                    if len(parts) >= 3:
-                        target_user = parts[1]
-                        whisper_msg = parts[2]
-                        print(f"{Colors.OKGREEN}[WHISPER to {target_user}]: {whisper_msg}{Colors.ENDC}")
-                    else:
-                        print(f"{Colors.FAIL}[-] Usage: /whisper <user> <message>{Colors.ENDC}")
-                elif message.startswith('/me '):
-                    action = message[4:]
-                    timestamp = datetime.now().strftime("%H:%M:%S")
-                    print(f"{Colors.OKCYAN}[{timestamp}] * {username} {action}{Colors.ENDC}")
-                elif message:
-                    if send_message(room_name, message):
-                        # Simulate network delay
-                        time.sleep(0.1)
-                
-            except KeyboardInterrupt:
-                print(f"\n{Colors.OKBLUE}[*] Disconnecting...{Colors.ENDC}")
-                break
-            except EOFError:
-                break
-    
-    # Main chat menu
-    while True:
-        print(f"\n{Colors.OKCYAN}=== Anonymous Chat Menu ==={Colors.ENDC}")
-        print("1. Join General Discussion")
-        print("2. Join Hacking & Security")
-        print("3. Join Tool Discussion")
-        print("4. Join Security News")
-        print("5. Join Random Chat")
-        print("6. Security Settings")
-        print("7. Change Username")
-        print("0. Exit Chat System")
-        
-        choice = input(f"\n{Colors.OKGREEN}Select room (0-7): {Colors.ENDC}").strip()
-        
-        if choice == "1":
-            show_chat_room("general")
-        elif choice == "2":
-            show_chat_room("hacking")
-        elif choice == "3":
-            show_chat_room("tools")
-        elif choice == "4":
-            show_chat_room("news")
-        elif choice == "5":
-            show_chat_room("random")
-        elif choice == "6":
-            print(f"\n{Colors.OKCYAN}=== Security Settings ==={Colors.ENDC}")
-            print("1. Enable Message Encryption: ✓")
-            print("2. Enable Identity Rotation: ✓")
-            print("3. Enable Anonymous Routing: ✓")
-            print("4. Enable Message Self-Destruct: ✓")
-            print("5. Enable End-to-End Encryption: ✓")
-            print("6. Enable Tor Integration: ✓")
-            print(f"{Colors.OKGREEN}[*] All security features enabled{Colors.ENDC}")
-            input(f"\n{Colors.OKCYAN}[Press Enter to continue]{Colors.ENDC}")
-        elif choice == "7":
-            new_username = input(f"{Colors.OKGREEN}Enter new username: {Colors.ENDC}").strip()
-            if new_username:
-                username = new_username
-                print(f"{Colors.OKGREEN}[+] Username changed to: {username}{Colors.ENDC}")
-            else:
-                print(f"{Colors.FAIL}[-] Username cannot be empty{Colors.ENDC}")
-        elif choice == "0":
-            print(f"{Colors.OKBLUE}[*] Disconnecting from anonymous chat...{Colors.ENDC}")
-            print(f"{Colors.OKGREEN}[+] All messages encrypted and secure{Colors.ENDC}")
-            break
-        else:
-            print(f"{Colors.FAIL}[-] Invalid option{Colors.ENDC}")
-    
-    log_result("anonymous_chat", f"Chat session completed. User: {username}")
-    input(f"\n{Colors.OKCYAN}[Press Enter to return to the menu]{Colors.ENDC}")
-
 # Categorized menu system
 categorized_menus = {
     "Network Reconnaissance": [
@@ -9673,7 +9496,6 @@ categorized_menus = {
         ("4. Automated WiFi Attack (Wifite)", wifi_wifite),
         ("5. WiFi MITM Attacks", wifi_mitm_menu),
         ("6. Advanced Bluetooth Hacking", bluetooth_scan),
-        ("7. Anonymous Hacker Chat", anonymous_chat_system),
     ],
     
     "Social Engineering": [
@@ -9728,6 +9550,9 @@ categorized_menus = {
         ("3. Start Listener (Netcat)", start_listener),
         ("4. Generate Persistence Script", generate_persistence_script),
         ("5. Generate msfvenom Payload", generate_msfvenom_payload),
+    ],
+    "HidraX Chat": [
+        ("1. Start HidraX Chat", hidrax_chat_system),
     ]
 }
 
@@ -9742,6 +9567,7 @@ main_categories = [
     "File Encryption & Security",
     "Information Gathering",
     "Post Exploitation",
+    "HidraX Chat",
     "Help & Documentation"
 ]
 
