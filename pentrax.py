@@ -1,33 +1,4 @@
 #!/usr/bin/env python3
-# Minimal imports for logo/disclaimer
-import sys
-import time
-
-# Global variables for cleanup - initialize early
-running_processes = []
-active_spinners = []
-
-# Add color output utilities
-class Colors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-def typewriter(text, delay=0.01):
-    for char in text:
-        print(char, end='', flush=True)
-        time.sleep(delay)
-
-def animated_print(text, delay=0.03):
-    for line in text.splitlines():
-        print(line)
-        time.sleep(delay)
 
 BANNER = f"""
 {Colors.OKCYAN}
@@ -83,6 +54,32 @@ import curses
 import base64
 import getpass
 
+# Global variables for cleanup - initialize early
+running_processes = []
+active_spinners = []
+
+# Add color output utilities
+class Colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def typewriter(text, delay=0.01):
+    for char in text:
+        print(char, end='', flush=True)
+        time.sleep(delay)
+
+def animated_print(text, delay=0.03):
+    for line in text.splitlines():
+        print(line)
+        time.sleep(delay)
+
 # Import cryptography modules
 try:
     from Crypto.Cipher import AES
@@ -134,6 +131,319 @@ except ImportError:
 
 def cprint(text, color):
     print(f"{color}{text}{Colors.ENDC}")
+
+def crack_zip_password():
+    """Crack password-protected ZIP files using various methods"""
+    print(f"\n{Colors.OKCYAN}[ZIP Password Cracker]{Colors.ENDC}")
+    print("""
+This module attempts to crack password-protected ZIP files using:
+- fcrackzip (brute force/dictionary)
+- John the Ripper with zip2john (dictionary)
+- hashcat (GPU-accelerated dictionary/mask)
+
+Note: Success depends on the encryption method and password complexity.
+- ZIPCrypto (legacy): Often crackable with these tools
+- AES-256: Very difficult if the password is strong
+    """)
+
+    # Get the ZIP file
+    zip_file = input("Enter path to the ZIP file: ").strip()
+    if not os.path.isfile(zip_file):
+        print(f"{Colors.FAIL}[!] File not found: {zip_file}{Colors.ENDC}")
+        safe_press_enter()
+        return
+
+    # Check if the ZIP is password-protected
+    try:
+        # Try to open with zipfile module to check if it's encrypted
+        import zipfile
+        with zipfile.ZipFile(zip_file) as zf:
+            for file_info in zf.infolist():
+                if file_info.flag_bits & 0x1:
+                    # File is encrypted
+                    print(f"{Colors.OKBLUE}[+] Confirmed: ZIP file is password-protected{Colors.ENDC}")
+                    break
+            else:
+                # No encrypted files found
+                print(f"{Colors.WARNING}[!] This ZIP file doesn't appear to be password protected.{Colors.ENDC}")
+                retry = input("Continue anyway? (y/n): ").strip().lower()
+                if retry != 'y':
+                    return
+    except zipfile.BadZipFile:
+        print(f"{Colors.WARNING}[!] The file appears to be corrupted or not a valid ZIP file.{Colors.ENDC}")
+        retry = input("Continue anyway? (y/n): ").strip().lower()
+        if retry != 'y':
+            return
+    except Exception as e:
+        print(f"{Colors.WARNING}[!] Couldn't verify ZIP encryption: {str(e)}{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] Will attempt to crack anyway.{Colors.ENDC}")
+
+    # Choose cracking method
+    print("\nSelect cracking method:")
+    print("1. Dictionary attack (try passwords from a wordlist)")
+    print("2. Brute force attack (try all possible combinations - very slow)")
+    print("3. Try all methods sequentially (recommended)")
+    crack_method = input("Select option [3]: ").strip() or "3"
+
+    # Get wordlist for dictionary attack
+    wordlist = input("\nWordlist path (default /usr/share/wordlists/rockyou.txt): ").strip() or "/usr/share/wordlists/rockyou.txt"
+    if not os.path.isfile(wordlist) and (crack_method == "1" or crack_method == "3"):
+        print(f"{Colors.WARNING}[!] Wordlist not found: {wordlist}{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] You may need to install or extract it.{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] On Kali Linux, run: sudo gunzip /usr/share/wordlists/rockyou.txt.gz{Colors.ENDC}")
+        wordlist_continue = input("Continue with potentially missing wordlist? (y/n): ").strip().lower()
+        if wordlist_continue != 'y':
+            return
+
+    # For brute force attack
+    if crack_method == "2" or crack_method == "3":
+        min_length = input("Minimum password length for brute force [4]: ").strip() or "4"
+        max_length = input("Maximum password length for brute force [8]: ").strip() or "8"
+        charset = input("Character set (1=a-z, 2=a-z0-9, 3=all) [2]: ").strip() or "2"
+
+        try:
+            min_length = int(min_length)
+            max_length = int(max_length)
+            charset = int(charset)
+        except ValueError:
+            print(f"{Colors.FAIL}[!] Invalid input. Using defaults.{Colors.ENDC}")
+            min_length = 4
+            max_length = 8
+            charset = 2
+
+    # Prepare hash file for John/hashcat
+    hash_file = f"{zip_file}.hash"
+    print(f"\n{Colors.OKBLUE}[*] Extracting hash from ZIP file...{Colors.ENDC}")
+
+    # Check for zip2john
+    if shutil.which("zip2john"):
+        try:
+            with open(hash_file, 'w') as hf:
+                subprocess.run(["zip2john", zip_file], stdout=hf, stderr=subprocess.DEVNULL)
+            print(f"{Colors.OKGREEN}[+] Hash extracted successfully{Colors.ENDC}")
+        except Exception as e:
+            print(f"{Colors.FAIL}[!] Failed to extract hash: {str(e)}{Colors.ENDC}")
+            hash_extracted = False
+        else:
+            hash_extracted = True
+    else:
+        print(f"{Colors.WARNING}[!] zip2john not found. John the Ripper method unavailable.{Colors.ENDC}")
+        hash_extracted = False
+
+    # Initialize result
+    password_found = False
+    password = None
+
+    # Method 1: fcrackzip
+    if crack_method in ["1", "3"] and shutil.which("fcrackzip"):
+        print(f"\n{Colors.OKBLUE}[*] Trying fcrackzip with dictionary attack...{Colors.ENDC}")
+        try:
+            spinner = Spinner("Running fcrackzip dictionary attack")
+            spinner.start()
+
+            # Run fcrackzip with dictionary
+            result = subprocess.run(
+                ["fcrackzip", "-u", "-D", "-p", wordlist, zip_file],
+                capture_output=True, text=True
+            )
+
+            spinner.stop()
+
+            # Check if password was found
+            for line in result.stdout.splitlines():
+                if "PASSWORD FOUND" in line:
+                    password = line.split("PASSWORD FOUND!!!!: pw == ")[1].strip()
+                    print(f"{Colors.OKGREEN}[+] Password found by fcrackzip: {password}{Colors.ENDC}")
+                    password_found = True
+                    break
+
+            if not password_found:
+                print(f"{Colors.WARNING}[!] fcrackzip dictionary attack failed to find the password{Colors.ENDC}")
+
+        except Exception as e:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.FAIL}[!] fcrackzip error: {str(e)}{Colors.ENDC}")
+
+    # Method 2: John the Ripper (if password not found yet)
+    if not password_found and crack_method in ["1", "3"] and shutil.which("john") and hash_extracted:
+        print(f"\n{Colors.OKBLUE}[*] Trying John the Ripper with dictionary attack...{Colors.ENDC}")
+        try:
+            spinner = Spinner("Running John the Ripper dictionary attack")
+            spinner.start()
+
+            # Run John with wordlist
+            subprocess.run(
+                ["john", "--wordlist=" + wordlist, hash_file],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+
+            # Get cracked password
+            result = subprocess.run(
+                ["john", "--show", hash_file],
+                capture_output=True, text=True
+            )
+
+            spinner.stop()
+
+            # Parse John's output
+            if "password hashes cracked" in result.stdout and "0 password hashes cracked" not in result.stdout:
+                for line in result.stdout.splitlines():
+                    if line and ":" in line and not line.startswith("0 password"):
+                        password = line.split(":")[1].strip()
+                        print(f"{Colors.OKGREEN}[+] Password found by John the Ripper: {password}{Colors.ENDC}")
+                        password_found = True
+                        break
+
+            if not password_found:
+                print(f"{Colors.WARNING}[!] John the Ripper dictionary attack failed to find the password{Colors.ENDC}")
+
+        except Exception as e:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.FAIL}[!] John the Ripper error: {str(e)}{Colors.ENDC}")
+
+    # Method 3: hashcat (if password not found yet)
+    if not password_found and crack_method in ["1", "3"] and shutil.which("hashcat") and hash_extracted:
+        print(f"\n{Colors.OKBLUE}[*] Trying hashcat with dictionary attack...{Colors.ENDC}")
+        try:
+            spinner = Spinner("Running hashcat dictionary attack")
+            spinner.start()
+
+            # Run hashcat with wordlist
+            # Mode 13600 is for ZIP passwords
+            subprocess.run(
+                ["hashcat", "-m", "13600", "-a", "0", hash_file, wordlist],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+
+            # Check if cracked
+            result = subprocess.run(
+                ["hashcat", "-m", "13600", "--show", hash_file],
+                capture_output=True, text=True
+            )
+
+            spinner.stop()
+
+            # Parse hashcat output
+            if result.stdout.strip():
+                for line in result.stdout.splitlines():
+                    if line and ":" in line:
+                        password = line.split(":")[-1].strip()
+                        print(f"{Colors.OKGREEN}[+] Password found by hashcat: {password}{Colors.ENDC}")
+                        password_found = True
+                        break
+
+            if not password_found:
+                print(f"{Colors.WARNING}[!] Hashcat dictionary attack failed to find the password{Colors.ENDC}")
+
+        except Exception as e:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.FAIL}[!] Hashcat error: {str(e)}{Colors.ENDC}")
+
+    # Method 4: Brute force with fcrackzip (if password not found yet)
+    if not password_found and crack_method in ["2", "3"] and shutil.which("fcrackzip"):
+        print(f"\n{Colors.OKBLUE}[*] Trying fcrackzip with brute force attack...{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] Warning: Brute force can take a very long time depending on settings{Colors.ENDC}")
+
+        # Define character set
+        if charset == 1:
+            charset_str = "a"  # a-z
+        elif charset == 3:
+            charset_str = "A"  # all characters
+        else:
+            charset_str = "1"  # a-z0-9
+
+        try:
+            spinner = Spinner("Running fcrackzip brute force attack")
+            spinner.start()
+
+            # Run fcrackzip with brute force
+            result = subprocess.run(
+                ["fcrackzip", "-u", "-c", charset_str, "-l", str(min_length) + "-" + str(max_length), zip_file],
+                capture_output=True, text=True, timeout=300  # 5-minute timeout
+            )
+
+            spinner.stop()
+
+            # Check if password was found
+            for line in result.stdout.splitlines():
+                if "PASSWORD FOUND" in line:
+                    password = line.split("PASSWORD FOUND!!!!: pw == ")[1].strip()
+                    print(f"{Colors.OKGREEN}[+] Password found by fcrackzip brute force: {password}{Colors.ENDC}")
+                    password_found = True
+                    break
+
+            if not password_found:
+                print(f"{Colors.WARNING}[!] Brute force attack failed to find the password in the time limit{Colors.ENDC}")
+
+        except subprocess.TimeoutExpired:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.WARNING}[!] Brute force attack timed out after 5 minutes{Colors.ENDC}")
+        except Exception as e:
+            try:
+                spinner.stop(False)
+            except:
+                pass
+            print(f"{Colors.FAIL}[!] fcrackzip brute force error: {str(e)}{Colors.ENDC}")
+
+    # Summary
+    if password_found:
+        print(f"\n{Colors.OKGREEN}[+] SUCCESS! Password found: {password}{Colors.ENDC}")
+
+        # Offer to extract the ZIP with the found password
+        extract = input("Extract the ZIP file with this password? (y/n): ").strip().lower()
+        if extract == 'y':
+            extract_dir = input("Extract to directory (default: extracted_zip): ").strip() or "extracted_zip"
+
+            if not os.path.exists(extract_dir):
+                os.makedirs(extract_dir)
+
+            print(f"{Colors.OKBLUE}[*] Extracting ZIP to {extract_dir}...{Colors.ENDC}")
+
+            try:
+                # Use 7z for extraction if available (better handling of various ZIP formats)
+                if shutil.which("7z"):
+                    subprocess.run(["7z", "x", "-o" + extract_dir, "-p" + password, zip_file])
+                    print(f"{Colors.OKGREEN}[+] Extraction completed successfully{Colors.ENDC}")
+                else:
+                    # Fall back to Python's zipfile
+                    with zipfile.ZipFile(zip_file) as zf:
+                        zf.extractall(path=extract_dir, pwd=password.encode())
+                    print(f"{Colors.OKGREEN}[+] Extraction completed successfully{Colors.ENDC}")
+            except Exception as e:
+                print(f"{Colors.FAIL}[!] Extraction failed: {str(e)}{Colors.ENDC}")
+    else:
+        print(f"\n{Colors.FAIL}[!] Failed to find the password with all methods{Colors.ENDC}")
+        print(f"{Colors.WARNING}[!] Possible reasons:{Colors.ENDC}")
+        print(f"{Colors.WARNING}  - The password is not in the wordlist{Colors.ENDC}")
+        print(f"{Colors.WARNING}  - The password is too complex for the brute force settings{Colors.ENDC}")
+        print(f"{Colors.WARNING}  - The ZIP uses strong encryption (AES-256){Colors.ENDC}")
+        print(f"{Colors.WARNING}  - The ZIP file is corrupted{Colors.ENDC}")
+
+        print(f"\n{Colors.OKBLUE}Tips for successful ZIP cracking:{Colors.ENDC}")
+        print(f"{Colors.OKBLUE}  - Try a larger wordlist (e.g., download larger ones from online sources){Colors.ENDC}")
+        print(f"{Colors.OKBLUE}  - For targeted attacks, create a custom wordlist with common words related to the target{Colors.ENDC}")
+        print(f"{Colors.OKBLUE}  - For better performance with hashcat, use a system with a powerful GPU{Colors.ENDC}")
+
+    # Clean up hash file
+    if os.path.exists(hash_file):
+        try:
+            os.remove(hash_file)
+        except:
+            pass
+
+    safe_press_enter()
 
 def safe_subprocess_run(cmd, **kwargs):
     """Run subprocess command with proper cleanup tracking"""
@@ -765,10 +1075,11 @@ def show_help_menu():
 {Colors.OKBLUE}8.{Colors.ENDC} Exploitation & Post-Exploitation
 {Colors.OKBLUE}9.{Colors.ENDC} Tool Management
 {Colors.OKBLUE}10.{Colors.ENDC} Safety & Legal Guidelines
+{Colors.OKBLUE}11.{Colors.ENDC} File Encryption & Decryption
 {Colors.OKBLUE}0.{Colors.ENDC} Return to Main Menu
 """
         print(help_menu)
-        choice = input(f"{Colors.OKBLUE}Select help topic [0-10]: {Colors.ENDC}").strip()
+        choice = input(f"{Colors.OKBLUE}Select help topic [0-11]: {Colors.ENDC}").strip()
         
         if choice == "0":
             break
@@ -792,8 +1103,10 @@ def show_help_menu():
             show_help_section("tools")
         elif choice == "10":
             show_help_section("safety")
+        elif choice == "11":
+            show_help_section("crypto")
         else:
-            print(f"{Colors.FAIL}Invalid choice. Please select 0-10.{Colors.ENDC}")
+            print(f"{Colors.FAIL}Invalid choice. Please select 0-11.{Colors.ENDC}")
 
 def show_help_section(section_key):
     """Display a specific help section"""
@@ -932,7 +1245,7 @@ def check_and_prompt_dependencies():
         "setoolkit", "requests", "beautifulsoup4", "lxml", "selenium", "scapy",
         "cryptography", "paramiko", "netaddr", "dnspython", "python-nmap",
         "python-whois", "shodan", "censys", "virustotal-api", "haveibeenpwned",
-        "tweepy", "facebook-sdk", "linkedin-api", "instagram-scraper"
+        "tweepy", "facebook-sdk", "linkedin-api", "instagram-scraper", "pycryptodome"
 ]
     github_tools = [
         ("BlackEye", "/opt/BlackEye/blackeye.sh"),
@@ -1266,17 +1579,18 @@ def nmap_scan(target):
         print(f"{Colors.FAIL}[-] Nmap scan failed: {e}{Colors.ENDC}")
         return
     
-    spinner.stop(success=True)
-    print(result.stdout)
-    # Highlight open ports
-    open_ports = []
-    for line in result.stdout.splitlines():
-        if "/tcp" in line and "open" in line:
-            print(f"[OPEN] {line}")
-            open_ports.append(line)
-    log_result("nmap", result.stdout)
-    if not open_ports:
-        print("[!] No open ports found by Nmap.")
+    finally:
+        spinner.stop(success=True)
+        print(result.stdout)
+        # Highlight open ports
+        open_ports = []
+        for line in result.stdout.splitlines():
+            if "/tcp" in line and "open" in line:
+                print(f"[OPEN] {line}")
+                open_ports.append(line)
+        log_result("nmap", result.stdout)
+        if not open_ports:
+            print("[!] No open ports found by Nmap.")
 
 # Hydra Wrapper
 def hydra_scan(ip, username, service):
@@ -1957,10 +2271,9 @@ def wifi_handshake_capture():
         proc.wait()
     except KeyboardInterrupt:
         print("[!] Capture stopped.")
-        if 'deauth_proc' in locals() and deauth_proc:
-            deauth_proc.terminate()
     except Exception as e:
         print(f"[-] airodump-ng failed: {e}")
+    finally:
         if 'deauth_proc' in locals() and deauth_proc:
             deauth_proc.terminate()
     
@@ -3248,318 +3561,6 @@ def advanced_ipv6_attacks():
 - mitm6 and THC-IPv6 tools will be used if available.
 """)
 
-def crack_zip_password():
-    """Crack password-protected ZIP files using various methods"""
-    print(f"\n{Colors.OKCYAN}[ZIP Password Cracker]{Colors.ENDC}")
-    print("""
-This module attempts to crack password-protected ZIP files using:
-- fcrackzip (brute force/dictionary)
-- John the Ripper with zip2john (dictionary)
-- hashcat (GPU-accelerated dictionary/mask)
-
-Note: Success depends on the encryption method and password complexity.
-- ZIPCrypto (legacy): Often crackable with these tools
-- AES-256: Very difficult if the password is strong
-    """)
-    
-    # Get the ZIP file
-    zip_file = input("Enter path to the ZIP file: ").strip()
-    if not os.path.isfile(zip_file):
-        print(f"{Colors.FAIL}[!] File not found: {zip_file}{Colors.ENDC}")
-        safe_press_enter()
-        return
-        
-    # Check if the ZIP is password-protected
-    try:
-        # Try to open with zipfile module to check if it's encrypted
-        import zipfile
-        with zipfile.ZipFile(zip_file) as zf:
-            for file_info in zf.infolist():
-                if file_info.flag_bits & 0x1:
-                    # File is encrypted
-                    print(f"{Colors.OKBLUE}[+] Confirmed: ZIP file is password-protected{Colors.ENDC}")
-                    break
-            else:
-                # No encrypted files found
-                print(f"{Colors.WARNING}[!] This ZIP file doesn't appear to be password protected.{Colors.ENDC}")
-                retry = input("Continue anyway? (y/n): ").strip().lower()
-                if retry != 'y':
-                    return
-    except zipfile.BadZipFile:
-        print(f"{Colors.WARNING}[!] The file appears to be corrupted or not a valid ZIP file.{Colors.ENDC}")
-        retry = input("Continue anyway? (y/n): ").strip().lower()
-        if retry != 'y':
-            return
-    except Exception as e:
-        print(f"{Colors.WARNING}[!] Couldn't verify ZIP encryption: {str(e)}{Colors.ENDC}")
-        print(f"{Colors.WARNING}[!] Will attempt to crack anyway.{Colors.ENDC}")
-    
-    # Choose cracking method
-    print("\nSelect cracking method:")
-    print("1. Dictionary attack (try passwords from a wordlist)")
-    print("2. Brute force attack (try all possible combinations - very slow)")
-    print("3. Try all methods sequentially (recommended)")
-    crack_method = input("Select option [3]: ").strip() or "3"
-    
-    # Get wordlist for dictionary attack
-    wordlist = input("\nWordlist path (default /usr/share/wordlists/rockyou.txt): ").strip() or "/usr/share/wordlists/rockyou.txt"
-    if not os.path.isfile(wordlist) and (crack_method == "1" or crack_method == "3"):
-        print(f"{Colors.WARNING}[!] Wordlist not found: {wordlist}{Colors.ENDC}")
-        print(f"{Colors.WARNING}[!] You may need to install or extract it.{Colors.ENDC}")
-        print(f"{Colors.WARNING}[!] On Kali Linux, run: sudo gunzip /usr/share/wordlists/rockyou.txt.gz{Colors.ENDC}")
-        wordlist_continue = input("Continue with potentially missing wordlist? (y/n): ").strip().lower()
-        if wordlist_continue != 'y':
-            return
-    
-    # For brute force attack
-    if crack_method == "2" or crack_method == "3":
-        min_length = input("Minimum password length for brute force [4]: ").strip() or "4"
-        max_length = input("Maximum password length for brute force [8]: ").strip() or "8"
-        charset = input("Character set (1=a-z, 2=a-z0-9, 3=all) [2]: ").strip() or "2"
-        
-        try:
-            min_length = int(min_length)
-            max_length = int(max_length)
-            charset = int(charset)
-        except ValueError:
-            print(f"{Colors.FAIL}[!] Invalid input. Using defaults.{Colors.ENDC}")
-            min_length = 4
-            max_length = 8
-            charset = 2
-            
-    # Prepare hash file for John/hashcat
-    hash_file = f"{zip_file}.hash"
-    print(f"\n{Colors.OKBLUE}[*] Extracting hash from ZIP file...{Colors.ENDC}")
-    
-    # Check for zip2john
-    if shutil.which("zip2john"):
-        try:
-            with open(hash_file, 'w') as hf:
-                subprocess.run(["zip2john", zip_file], stdout=hf, stderr=subprocess.DEVNULL)
-            print(f"{Colors.OKGREEN}[+] Hash extracted successfully{Colors.ENDC}")
-        except Exception as e:
-            print(f"{Colors.FAIL}[!] Failed to extract hash: {str(e)}{Colors.ENDC}")
-            hash_extracted = False
-        else:
-            hash_extracted = True
-    else:
-        print(f"{Colors.WARNING}[!] zip2john not found. John the Ripper method unavailable.{Colors.ENDC}")
-        hash_extracted = False
-    
-    # Initialize result
-    password_found = False
-    password = None
-    
-    # Method 1: fcrackzip
-    if crack_method in ["1", "3"] and shutil.which("fcrackzip"):
-        print(f"\n{Colors.OKBLUE}[*] Trying fcrackzip with dictionary attack...{Colors.ENDC}")
-        try:
-            spinner = Spinner("Running fcrackzip dictionary attack")
-            spinner.start()
-            
-            # Run fcrackzip with dictionary
-            result = subprocess.run(
-                ["fcrackzip", "-u", "-D", "-p", wordlist, zip_file],
-                capture_output=True, text=True
-            )
-            
-            spinner.stop()
-            
-            # Check if password was found
-            for line in result.stdout.splitlines():
-                if "PASSWORD FOUND" in line:
-                    password = line.split("PASSWORD FOUND!!!!: pw == ")[1].strip()
-                    print(f"{Colors.OKGREEN}[+] Password found by fcrackzip: {password}{Colors.ENDC}")
-                    password_found = True
-                    break
-            
-            if not password_found:
-                print(f"{Colors.WARNING}[!] fcrackzip dictionary attack failed to find the password{Colors.ENDC}")
-            
-        except Exception as e:
-            try:
-                spinner.stop(False)
-            except:
-                pass
-            print(f"{Colors.FAIL}[!] fcrackzip error: {str(e)}{Colors.ENDC}")
-    
-    # Method 2: John the Ripper (if password not found yet)
-    if not password_found and crack_method in ["1", "3"] and shutil.which("john") and hash_extracted:
-        print(f"\n{Colors.OKBLUE}[*] Trying John the Ripper with dictionary attack...{Colors.ENDC}")
-        try:
-            spinner = Spinner("Running John the Ripper dictionary attack")
-            spinner.start()
-            
-            # Run John with wordlist
-            subprocess.run(
-                ["john", "--wordlist=" + wordlist, hash_file],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            
-            # Get cracked password
-            result = subprocess.run(
-                ["john", "--show", hash_file],
-                capture_output=True, text=True
-            )
-            
-            spinner.stop()
-            
-            # Parse John's output
-            if "password hashes cracked" in result.stdout and "0 password hashes cracked" not in result.stdout:
-                for line in result.stdout.splitlines():
-                    if line and ":" in line and not line.startswith("0 password"):
-                        password = line.split(":")[1].strip()
-                        print(f"{Colors.OKGREEN}[+] Password found by John the Ripper: {password}{Colors.ENDC}")
-                        password_found = True
-                        break
-            
-            if not password_found:
-                print(f"{Colors.WARNING}[!] John the Ripper dictionary attack failed to find the password{Colors.ENDC}")
-                
-        except Exception as e:
-            try:
-                spinner.stop(False)
-            except:
-                pass
-            print(f"{Colors.FAIL}[!] John the Ripper error: {str(e)}{Colors.ENDC}")
-    
-    # Method 3: hashcat (if password not found yet)
-    if not password_found and crack_method in ["1", "3"] and shutil.which("hashcat") and hash_extracted:
-        print(f"\n{Colors.OKBLUE}[*] Trying hashcat with dictionary attack...{Colors.ENDC}")
-        try:
-            spinner = Spinner("Running hashcat dictionary attack")
-            spinner.start()
-            
-            # Run hashcat with wordlist
-            # Mode 13600 is for ZIP passwords
-            subprocess.run(
-                ["hashcat", "-m", "13600", "-a", "0", hash_file, wordlist],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            
-            # Check if cracked
-            result = subprocess.run(
-                ["hashcat", "-m", "13600", "--show", hash_file],
-                capture_output=True, text=True
-            )
-            
-            spinner.stop()
-            
-            # Parse hashcat output
-            if result.stdout.strip():
-                for line in result.stdout.splitlines():
-                    if line and ":" in line:
-                        password = line.split(":")[-1].strip()
-                        print(f"{Colors.OKGREEN}[+] Password found by hashcat: {password}{Colors.ENDC}")
-                        password_found = True
-                        break
-            
-            if not password_found:
-                print(f"{Colors.WARNING}[!] Hashcat dictionary attack failed to find the password{Colors.ENDC}")
-                
-        except Exception as e:
-            try:
-                spinner.stop(False)
-            except:
-                pass
-            print(f"{Colors.FAIL}[!] Hashcat error: {str(e)}{Colors.ENDC}")
-    
-    # Method 4: Brute force with fcrackzip (if password not found yet)
-    if not password_found and crack_method in ["2", "3"] and shutil.which("fcrackzip"):
-        print(f"\n{Colors.OKBLUE}[*] Trying fcrackzip with brute force attack...{Colors.ENDC}")
-        print(f"{Colors.WARNING}[!] Warning: Brute force can take a very long time depending on settings{Colors.ENDC}")
-        
-        # Define character set
-        if charset == 1:
-            charset_str = "a"  # a-z
-        elif charset == 3:
-            charset_str = "A"  # all characters
-        else:
-            charset_str = "1"  # a-z0-9
-            
-        try:
-            spinner = Spinner("Running fcrackzip brute force attack")
-            spinner.start()
-            
-            # Run fcrackzip with brute force
-            result = subprocess.run(
-                ["fcrackzip", "-u", "-c", charset_str, "-l", str(min_length) + "-" + str(max_length), zip_file],
-                capture_output=True, text=True, timeout=300  # 5-minute timeout
-            )
-            
-            spinner.stop()
-            
-            # Check if password was found
-            for line in result.stdout.splitlines():
-                if "PASSWORD FOUND" in line:
-                    password = line.split("PASSWORD FOUND!!!!: pw == ")[1].strip()
-                    print(f"{Colors.OKGREEN}[+] Password found by fcrackzip brute force: {password}{Colors.ENDC}")
-                    password_found = True
-                    break
-            
-            if not password_found:
-                print(f"{Colors.WARNING}[!] Brute force attack failed to find the password in the time limit{Colors.ENDC}")
-                
-        except subprocess.TimeoutExpired:
-            try:
-                spinner.stop(False)
-            except:
-                pass
-            print(f"{Colors.WARNING}[!] Brute force attack timed out after 5 minutes{Colors.ENDC}")
-        except Exception as e:
-            try:
-                spinner.stop(False)
-            except:
-                pass
-            print(f"{Colors.FAIL}[!] fcrackzip brute force error: {str(e)}{Colors.ENDC}")
-    
-    # Summary
-    if password_found:
-        print(f"\n{Colors.OKGREEN}[+] SUCCESS! Password found: {password}{Colors.ENDC}")
-        
-        # Offer to extract the ZIP with the found password
-        extract = input("Extract the ZIP file with this password? (y/n): ").strip().lower()
-        if extract == 'y':
-            extract_dir = input("Extract to directory (default: extracted_zip): ").strip() or "extracted_zip"
-            
-            if not os.path.exists(extract_dir):
-                os.makedirs(extract_dir)
-                
-            print(f"{Colors.OKBLUE}[*] Extracting ZIP to {extract_dir}...{Colors.ENDC}")
-            
-            try:
-                # Use 7z for extraction if available (better handling of various ZIP formats)
-                if shutil.which("7z"):
-                    subprocess.run(["7z", "x", "-o" + extract_dir, "-p" + password, zip_file])
-                    print(f"{Colors.OKGREEN}[+] Extraction completed successfully{Colors.ENDC}")
-                else:
-                    # Fall back to Python's zipfile
-                    with zipfile.ZipFile(zip_file) as zf:
-                        zf.extractall(path=extract_dir, pwd=password.encode())
-                    print(f"{Colors.OKGREEN}[+] Extraction completed successfully{Colors.ENDC}")
-            except Exception as e:
-                print(f"{Colors.FAIL}[!] Extraction failed: {str(e)}{Colors.ENDC}")
-    else:
-        print(f"\n{Colors.FAIL}[!] Failed to find the password with all methods{Colors.ENDC}")
-        print(f"{Colors.WARNING}[!] Possible reasons:{Colors.ENDC}")
-        print(f"{Colors.WARNING}  - The password is not in the wordlist{Colors.ENDC}")
-        print(f"{Colors.WARNING}  - The password is too complex for the brute force settings{Colors.ENDC}")
-        print(f"{Colors.WARNING}  - The ZIP uses strong encryption (AES-256){Colors.ENDC}")
-        print(f"{Colors.WARNING}  - The ZIP file is corrupted{Colors.ENDC}")
-        
-        print(f"\n{Colors.OKBLUE}Tips for successful ZIP cracking:{Colors.ENDC}")
-        print(f"{Colors.OKBLUE}  - Try a larger wordlist (e.g., download larger ones from online sources){Colors.ENDC}")
-        print(f"{Colors.OKBLUE}  - For targeted attacks, create a custom wordlist with common words related to the target{Colors.ENDC}")
-        print(f"{Colors.OKBLUE}  - For better performance with hashcat, use a system with a powerful GPU{Colors.ENDC}")
-    
-    # Clean up hash file
-    if os.path.exists(hash_file):
-        try:
-            os.remove(hash_file)
-        except:
-            pass
-            
-    safe_press_enter()
 
 # File Encryption/Decryption Tools
 def file_crypto_menu():
@@ -3597,39 +3598,6 @@ def file_crypto_menu():
             secure_delete()
         elif choice == "8":
             crack_zip_password()
-        elif choice == "0":
-            break
-        else:
-            print(f"{Colors.FAIL}Invalid option. Please try again.{Colors.ENDC}")
-        menu = """
-[File Encryption & Decryption Tools]
-
-1. Encrypt a file (AES-256)
-2. Decrypt a file (AES-256)
-3. Generate encryption key
-4. Hash a file (MD5, SHA1, SHA256)
-5. Encrypt a directory (AES-256)
-6. Decrypt a directory (AES-256)
-7. Secure file deletion (shred)
-0. Return to main menu
-"""
-        print_menu_with_header(menu)
-        choice = input(f"{Colors.OKBLUE}Choose an option: {Colors.ENDC}")
-        
-        if choice == "1":
-            encrypt_file()
-        elif choice == "2":
-            decrypt_file()
-        elif choice == "3":
-            generate_key()
-        elif choice == "4":
-            hash_file()
-        elif choice == "5":
-            encrypt_directory()
-        elif choice == "6":
-            decrypt_directory()
-        elif choice == "7":
-            secure_delete()
         elif choice == "0":
             break
         else:
@@ -4227,9 +4195,30 @@ def get_random_bytes(length):
     """Generate cryptographically secure random bytes"""
     return os.urandom(length)
 
-# Minimal imports for logo/disclaimer
+# Now check platform
+if not sys.platform.startswith('linux'):
+    print("\n[!] PENTRA-X is only supported on Linux.\nPlease use a Linux system (Kali, Parrot, Ubuntu, etc.) for full functionality.\n")
+    sys.exit(1)
+
+# All other imports below...
+import subprocess
+import socket
+import requests
+import hashlib
+import os
+import ssl
+import json
+import threading
+import shutil
+import signal
 import sys
-import time
+import random
+from urllib.parse import urlparse
+import re
+from datetime import datetime
+import curses
+import base64
+import getpass
 
 # Global variables for cleanup - initialize early
 running_processes = []
@@ -4256,294 +4245,6 @@ def animated_print(text, delay=0.03):
     for line in text.splitlines():
         print(line)
         time.sleep(delay)
-
-
-# Now check platform
-if not sys.platform.startswith('linux'):
-    print("\n[!] PENTRA-X is only supported on Linux.\nPlease use a Linux system (Kali, Parrot, Ubuntu, etc.) for full functionality.\n")
-    sys.exit(1)
-
-# All other imports below...
-import subprocess
-import socket
-import requests
-import hashlib
-import os
-import ssl
-import json
-import threading
-import shutil
-import signal
-import sys
-import random
-from urllib.parse import urlparse
-import re
-from datetime import datetime
-import curses
-
-def cprint(text, color):
-    print(f"{color}{text}{Colors.ENDC}")
-
-def safe_subprocess_run(cmd, **kwargs):
-    """Run subprocess command with proper cleanup tracking"""
-    try:
-        process = subprocess.Popen(cmd, **kwargs)
-        running_processes.append(process)
-        result = process.communicate()
-        running_processes.remove(process)
-        return subprocess.CompletedProcess(cmd, process.returncode, result[0], result[1])
-    except Exception as e:
-        print(f"{Colors.FAIL}[-] Subprocess error: {e}{Colors.ENDC}")
-        return None
-
-def safe_subprocess_run_with_output(cmd, **kwargs):
-    """Run subprocess command with real-time output and CTRL+C handling"""
-    try:
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, 
-                                 text=True, **kwargs)
-        running_processes.append(process)
-        
-        # Read output in real-time
-        if process.stdout:
-            for line in process.stdout:
-                print(line, end='', flush=True)
-        
-        process.wait()
-        running_processes.remove(process)
-        return process.returncode == 0
-        
-    except KeyboardInterrupt:
-        if 'process' in locals():
-            print(f"\n{Colors.WARNING}[!] Terminating process...{Colors.ENDC}")
-            process.terminate()
-            try:
-                process.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                process.kill()
-            running_processes.remove(process)
-        return False
-    except Exception as e:
-        print(f"{Colors.FAIL}[-] Subprocess error: {e}{Colors.ENDC}")
-        if 'process' in locals() and process in running_processes:
-            running_processes.remove(process)
-        return False
-
-def safe_input(prompt=""):
-    """Get user input with CTRL+C handling"""
-    try:
-        return input(prompt)
-    except KeyboardInterrupt:
-        print(f"\n{Colors.WARNING}[!] Input cancelled by user{Colors.ENDC}")
-        return None
-
-def run_with_interrupt_handling(func, *args, **kwargs):
-    """Run a function with proper CTRL+C handling"""
-    try:
-        return func(*args, **kwargs)
-    except KeyboardInterrupt:
-        print(f"\n{Colors.WARNING}[!] Operation cancelled by user{Colors.ENDC}")
-        return None
-    except Exception as e:
-        print(f"\n{Colors.FAIL}[!] Error during operation: {e}{Colors.ENDC}")
-        return None
-
-def safe_press_enter(prompt="\n[Press Enter to return to the menu]"):
-    """Safe 'Press Enter' prompt with CTRL+C handling"""
-    try:
-        input(prompt)
-    except KeyboardInterrupt:
-        print(f"\n{Colors.WARNING}[!] Returning to menu...{Colors.ENDC}")
-        return
-
-def run_long_operation(operation_name, operation_func, *args, **kwargs):
-    """Run a long operation with proper CTRL+C handling and progress indication"""
-    print(f"{Colors.OKBLUE}[*] Starting {operation_name}...{Colors.ENDC}")
-    print(f"{Colors.WARNING}[!] Press Ctrl+C to cancel at any time{Colors.ENDC}")
-    
-    try:
-        # Create a spinner for the operation
-        spinner = Spinner(f"Running {operation_name}")
-        spinner.start()
-        
-        # Run the operation
-        result = operation_func(*args, **kwargs)
-        
-        spinner.stop()
-        print(f"{Colors.OKGREEN}[+] {operation_name} completed successfully{Colors.ENDC}")
-        return result
-        
-    except KeyboardInterrupt:
-        if 'spinner' in locals():
-            spinner.stop()
-        print(f"\n{Colors.WARNING}[!] {operation_name} cancelled by user{Colors.ENDC}")
-        return None
-    except Exception as e:
-        if 'spinner' in locals():
-            spinner.stop()
-        print(f"\n{Colors.FAIL}[!] {operation_name} failed: {e}{Colors.ENDC}")
-        return None
-
-class Spinner:
-    """Enhanced spinner with multiple animation styles and progress tracking"""
-    
-    SPINNER_STYLES = {
-        'dots': ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
-        'line': ['|', '/', '-', '\\'],
-        'arrow': ['←', '↖', '↑', '↗', '→', '↘', '↓', '↙'],
-        'bounce': ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
-        'pulse': ['●', '○', '●', '○'],
-        'bar': ['▌', '▀', '▐', '▄']
-    }
-    
-    def __init__(self, message="Working...", style='dots', show_progress=False, total=100):
-        self.message = message
-        self.style = style if style in self.SPINNER_STYLES else 'dots'
-        self.spinner = self.SPINNER_STYLES[self.style]
-        self.idx = 0
-        self.running = False
-        self.thread = None
-        self.show_progress = show_progress
-        self.total = total
-        self.current = 0
-        self.start_time = None
-        # Register with global active spinners
-        active_spinners.append(self)
-    
-    def start(self):
-        """Start the spinner animation"""
-        self.running = True
-        self.start_time = time.time()
-        
-        def spin():
-            while self.running:
-                elapsed = time.time() - self.start_time if self.start_time else 0
-                spinner_char = self.spinner[self.idx % len(self.spinner)]
-                
-                if self.show_progress and self.total > 0:
-                    progress = (self.current / self.total) * 100
-                    bar_length = 20
-                    filled_length = int(bar_length * self.current // self.total)
-                    bar = '█' * filled_length + '░' * (bar_length - filled_length)
-                    eta = self._calculate_eta(elapsed)
-                    print(f"\r{self.message} {spinner_char} [{bar}] {progress:.1f}% {eta}", end='', flush=True)
-                else:
-                    print(f"\r{self.message} {spinner_char}", end='', flush=True)
-                
-                self.idx += 1
-                time.sleep(0.1)
-        
-        self.thread = threading.Thread(target=spin, daemon=True)
-        self.thread.start()
-    
-    def update_progress(self, current, total=None):
-        """Update progress for progress bar mode"""
-        self.current = current
-        if total is not None:
-            self.total = total
-    
-    def _calculate_eta(self, elapsed):
-        """Calculate estimated time remaining"""
-        if self.current == 0:
-            return "ETA: --:--"
-        
-        rate = self.current / elapsed if elapsed > 0 else 0
-        if rate > 0:
-            remaining = (self.total - self.current) / rate
-            minutes = int(remaining // 60)
-            seconds = int(remaining % 60)
-            return f"ETA: {minutes:02d}:{seconds:02d}"
-        return "ETA: --:--"
-    
-    def stop(self, success=True):
-        """Stop the spinner with optional success indicator"""
-        self.running = False
-        if self.thread:
-            self.thread.join(timeout=1)
-        
-        # Clear the line
-        clear_length = len(self.message) + 4
-        if self.show_progress:
-            clear_length = len(self.message) + 50  # Account for progress bar
-        
-        print("\r" + " " * clear_length + "\r", end='')
-        
-        # Show completion indicator
-        if success:
-            print(f"{Colors.OKGREEN}✓{Colors.ENDC} {self.message} completed")
-        else:
-            print(f"{Colors.FAIL}✗{Colors.ENDC} {self.message} failed")
-        
-        # Remove from active spinners
-        if self in active_spinners:
-            active_spinners.remove(self)
-
-class ProgressBar:
-    """Simple progress bar for operations with known total"""
-    
-    def __init__(self, total, description="Progress"):
-        self.total = total
-        self.current = 0
-        self.description = description
-        self.start_time = time.time()
-    
-    def update(self, increment=1):
-        """Update progress by increment"""
-        self.current += increment
-        self._display()
-    
-    def set_progress(self, current):
-        """Set current progress"""
-        self.current = min(current, self.total)
-        self._display()
-    
-    def _display(self):
-        """Display the progress bar"""
-        if self.total <= 0:
-            return
-        
-        progress = (self.current / self.total) * 100
-        bar_length = 40
-        filled_length = int(bar_length * self.current // self.total)
-        bar = '█' * filled_length + '░' * (bar_length - filled_length)
-        
-        elapsed = time.time() - self.start_time
-        if self.current > 0:
-            rate = self.current / elapsed
-            eta = (self.total - self.current) / rate if rate > 0 else 0
-            eta_str = f"ETA: {int(eta//60):02d}:{int(eta%60):02d}"
-        else:
-            eta_str = "ETA: --:--"
-        
-        print(f"\r{self.description}: [{bar}] {progress:.1f}% ({self.current}/{self.total}) {eta_str}", end='', flush=True)
-    
-    def finish(self, success=True):
-        """Finish the progress bar"""
-        print()  # New line after progress bar
-        if success:
-            print(f"{Colors.OKGREEN}✓{Colors.ENDC} {self.description} completed")
-        else:
-            print(f"{Colors.FAIL}✗{Colors.ENDC} {self.description} failed")
-
-
-# Only keep the first definition of these menu functions (around line 328+)
-def print_menu_with_header(menu_text):
-    print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
-    print(color_menu_numbers(menu_text))
-    print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
-
-def print_menu_no_clear(menu_text):
-    print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
-    print(color_menu_numbers(menu_text))
-    print(Colors.OKCYAN + "-"*60 + Colors.ENDC)
-
-# Utility to color menu numbers (e.g., '1.', '2.', etc.) in cyan
-import re
-
-# Only keep the first definition of color_menu_numbers (around line 342+)
-def color_menu_numbers(menu_text):
-    def repl(match):
-        return f"{Colors.OKCYAN}{match.group(0)}{Colors.ENDC}"
-    return re.sub(r"^\s*\d+\. ", repl, menu_text, flags=re.MULTILINE)
 
 # Documentation and Help System
 HELP_SECTIONS = {
