@@ -1,5 +1,6 @@
 import socket
 import threading
+import secrets
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes
@@ -7,6 +8,7 @@ from cryptography.hazmat.primitives import hashes
 clients = {} # {username: client_socket}
 public_keys = {} # {username: public_key}
 groups = {} # {group_name: [usernames]}
+invite_codes = {} # {invite_code: group_name or username}
 
 def generate_keys():
     private_key = rsa.generate_private_key(
@@ -47,10 +49,26 @@ def decrypt_message(encrypted_message, private_key):
         )
     ).decode('utf-8')
 
+def generate_invite_code():
+    return secrets.token_hex(8)
+
 def handle_client(client_socket):
     private_key, public_key = generate_keys()
 
-    username = client_socket.recv(1024).decode('utf-8')
+    # Initial handshake for username and optional invite code
+    initial_data = client_socket.recv(1024).decode('utf-8').split(' ')
+    username = initial_data[0]
+
+    if len(initial_data) > 1:
+        invite_code = initial_data[1]
+        if invite_codes.get(invite_code):
+            target_user = invite_codes[invite_code]
+            print(f"{username} connected with invite code for {target_user}")
+        else:
+            client_socket.send(b"Invalid invite code")
+            client_socket.close()
+            return
+
     clients[username] = client_socket
     public_keys[username] = public_key
 
@@ -69,12 +87,30 @@ def handle_client(client_socket):
             if decrypted_message.startswith('/create_group'):
                 group_name = decrypted_message.split(' ')[1]
                 groups[group_name] = [username]
-                print(f"Group '{group_name}' created by {username}")
+                invite_code = generate_invite_code()
+                invite_codes[invite_code] = group_name
+                print(f"Group '{group_name}' created by {username} with invite code: {invite_code}")
+                clients[username].send(encrypt_message(f"Group '{group_name}' created. Invite code: {invite_code}", public_keys[username]))
+            elif decrypted_message.startswith('/generate_invite'):
+                invite_code = generate_invite_code()
+                invite_codes[invite_code] = username
+                print(f"Invite code for {username}: {invite_code}")
+                clients[username].send(encrypt_message(f"Your invite code: {invite_code}", public_keys[username]))
             elif decrypted_message.startswith('/join_group'):
-                group_name = decrypted_message.split(' ')[1]
-                if group_name in groups:
-                    groups[group_name].append(username)
-                    print(f"{username} joined group '{group_name}'")
+                parts = decrypted_message.split(' ')
+                if len(parts) == 3:
+                    group_name = parts[1]
+                    invite_code = parts[2]
+                    if invite_codes.get(invite_code) == group_name:
+                        if group_name in groups:
+                            groups[group_name].append(username)
+                            print(f"{username} joined group '{group_name}'")
+                        else:
+                            clients[username].send(encrypt_message(f"Group '{group_name}' does not exist.", public_keys[username]))
+                    else:
+                        clients[username].send(encrypt_message("Invalid invite code.", public_keys[username]))
+                else:
+                    clients[username].send(encrypt_message("Usage: /join_group <group_name> <invite_code>", public_keys[username]))
             elif decrypted_message.startswith('/group_message'):
                 parts = decrypted_message.split(' ', 2)
                 group_name = parts[1]
