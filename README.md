@@ -6,11 +6,11 @@
 ██║     ███████╗██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
 ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
 
-      FULL PENTEST TOOLKIT (V1.2.2)
+      FULL PENTEST TOOLKIT (V2.0.0)
 ```
 
 <p align="center">
-  <b>PENTRA-X: Full Pentest Toolkit (v1.2.2)</b><br>
+  <b>PENTRA-X: Full Pentest Toolkit (v2.0.0)</b><br>
   <i>Created by 0xP4X</i><br>
   <a href="https://github.com/0xP4X/">GitHub</a>
 </p>
@@ -22,182 +22,188 @@
 > This toolkit is for **educational and authorized penetration testing use only**.
 > Unauthorized use against systems you do not own or have explicit written permission to test is **illegal and unethical**.
 > By using this toolkit, you agree to comply with all applicable laws and regulations.
-> The author assumes no liability for misuse or damage caused by this software.
 
 ---
 
-## 🚀 **Features**
+## 🚀 What's New in v2.0.0
 
-### ✨ **User Experience**
-- **🎯 Arrow Key Navigation** - Navigate menus with arrow keys
-- **🎨 Colorized Interface** - Beautiful colored menus and output
-- **⚡ Graceful CTRL+C Handling** - Professional exit with cleanup
-- **🔄 Real-time Progress Indicators** - Spinners for long operations
-- **📱 Responsive Design** - Clean, modern interface
-
-### 🛠️ **Pentesting Features**
-- **🔍 Network Reconnaissance** - Comprehensive network discovery and scanning
-- **🌐 Web Testing & Exploitation** - Web vulnerability assessment tools
-- **📡 Wireless Attacks** - WiFi, Bluetooth hacking and security testing
-- **🎭 Social Engineering** - Phishing frameworks and attack vectors
-- **🔑 Password Attacks** - Brute force, hash cracking, and credential testing
-- **🔄 MITM & Network Attacks** - Man-in-the-middle attack frameworks
-- **🔒 File Encryption & Security** - AES-256 encryption and security tools
-- **🕵️ Information Gathering** - OSINT and target reconnaissance
-- **🧨 Post Exploitation** - Shell generation and persistence mechanisms
+- ✅ **Modular Architecture** - Clean package structure for easy extension
+- ✅ **37 Working Tools** - All tools fully implemented (no placeholders)
+- ✅ **YAML Configuration** - Customizable settings via `config.yaml`
+- ✅ **Structured Logging** - File and console logging with colors
+- ✅ **Progress Indicators** - Spinners and progress bars for all operations
+- ✅ **Report Generation** - Professional HTML/TXT/JSON pentest reports
 
 ---
 
-## 🏃‍♂️ **Quick Start**
+## 🏃‍♂️ Quick Start
 
-### **Requirements**
+### Requirements
 - Linux system (Kali, Parrot, Ubuntu, etc.)
 - Python 3.7+
 - Root/sudo privileges for full functionality
 
-### **Installation & Usage**
+### Installation
 ```bash
-# Clone or download the toolkit
 git clone https://github.com/0xP4X/pentra-x.git
 cd pentra-x
 
-# Install as a system-wide tool (recommended)
-sudo ./install.sh
-
-# Or run directly
-python3 pentrax.py
-```
-
-The toolkit will automatically:
-- ✅ Check and install dependencies
-- ✅ Set up required tools and wordlists
-- ✅ Configure the environment
-- ✅ Launch the interactive menu
-
----
-
-## 📋 **Menu Categories**
-
-### 1. Network Reconnaissance
-- ARP Scanning
-- Port Scanning
-- Nmap Advanced Scan
-- Network Enumeration
-
-### 2. Web Testing & Exploitation
-- Gobuster Directory Scan
-- SQLMap Injection Scan
-- Advanced XSS Testing
-- LFI/RFI Testing
-- CSRF Testing
-- Web Vulnerability Scanner
-- SSRF Testing
-- Directory Bruteforce
-
-### 3. Wireless Attacks
-- WiFi Network Scan
-- Capture WPA Handshake
-- Crack WPA Handshake
-- Automated WiFi Attack (Wifite)
-- WiFi MITM Attacks
-- Advanced Bluetooth Hacking
-- Anonymous Hacker Chat
-
-### 4. Social Engineering
-- BlackEye Phishing Framework
-- SocialFish Phishing Framework
-- HiddenEye Phishing Framework
-- Advanced Site Cloner
-- Social Engineering Toolkit (SET)
-- Fake Email Spoof
-- Phishing Page Generator
-
-### 5. Password Attacks
-- Hydra Login Bruteforce
-- Crack SHA256 Hash
-- Advanced SMB/NTLM/LDAP Brute-force
-- Advanced Hashdump & Offline Password Cracking
-
-### 6. MITM & Network Attacks
-- Advanced MITM Attacks
-- ARP Spoofing
-- DNS Spoofing
-- Advanced DHCP Starvation/Poisoning
-- Advanced SNMP Enumeration
-- Advanced IPv6 Attacks
-
-### 7. File Encryption & Security
-- File Encryption/Decryption Tools
-- Secure File Deletion
-- File Hash Calculator
-- Generate Encryption Keys
-- Directory Encryption
-- Directory Decryption
-- Crack ZIP Password
-
-### 8. Information Gathering
-- Whois Lookup
-- DNS Lookup
-- SSL Certificate Info
-- Subdomain Finder
-- HTTP Headers Analysis
-- CVE Search
-- OSINT Toolkit
-- OSINT Wordlist Generator
-
-### 9. Post Exploitation
-- Reverse Shell (TCP)
-- Generate Reverse Shell Payload
-- Start Listener (Netcat)
-- Generate Persistence Script
-- Generate msfvenom Payload
-
----
-
-## 🛠️ **System-Wide Installation**
-
-Install Pentra-X as a system command, available anywhere in your terminal:
-```bash
-# Clone the repository
-git clone https://github.com/0xP4X/pentra-x.git
-cd pentra-x
-
-# Run the installer
-sudo ./install.sh
-
-# Now you can run from anywhere
+# Option 1: Install as package (recommended)
+pip install -e .
 pentrax
+
+# Option 2: Run directly
+python3 -m pentrax
+
+# Option 3: System-wide install
+sudo ./install.sh
 ```
 
 ---
 
-## 💡 **Usage Tips**
+## 📋 Tools (37 Total)
 
-- Use **root privileges** for full functionality of networking tools
-- For best results, run on **Kali Linux** or similar security distributions
-- Create **custom wordlists** with the OSINT Wordlist Generator for targeted attacks
-- Use the **arrow key navigation** for quicker menu selection
-- Check the **help documentation** for detailed tool usage
+### 1. Network Reconnaissance (4)
+| Tool | Description |
+|------|-------------|
+| ARP Scan | Discover hosts on local network |
+| Port Scan | Multi-threaded TCP port scanner |
+| Nmap Advanced | 8 preset scan types with parsing |
+| Network Enum | Interfaces, routes, ARP, DNS, connections |
+
+### 2. Web Testing & Exploitation (5)
+| Tool | Description |
+|------|-------------|
+| SQLMap | SQL injection scanner |
+| XSS Testing | 15 XSS payload variants |
+| LFI/RFI Testing | Path traversal + PHP filters |
+| Gobuster | Directory/vhost/DNS brute force |
+| Dir Bruteforce | Multi-threaded directory finder |
+
+### 3. Wireless Attacks (4)
+| Tool | Description |
+|------|-------------|
+| WiFi Scan | Network discovery with security analysis |
+| Monitor Mode | Enable/disable monitor interface |
+| Handshake Capture | WPA/WPA2 4-way handshake capture |
+| Handshake Crack | Aircrack-ng wordlist attack |
+
+### 4. Social Engineering (4)
+| Tool | Description |
+|------|-------------|
+| Phishing Generator | Custom login pages + PHP capture |
+| SET Toolkit | Launch Social Engineering Toolkit |
+| Email Spoofer | Spoofed email sender |
+| Website Cloner | Mirror sites with wget |
+
+### 5. Password Attacks (2)
+| Tool | Description |
+|------|-------------|
+| Hydra | Multi-protocol brute force |
+| Hash Cracker | MD5/SHA1/SHA256/SHA512 cracker |
+
+### 6. MITM & Network Attacks (2)
+| Tool | Description |
+|------|-------------|
+| ARP Spoofing | Traffic interception |
+| DNS Spoofing | Redirect DNS queries |
+
+### 7. File Encryption & Security (6)
+| Tool | Description |
+|------|-------------|
+| Encrypt File | AES-256 encryption |
+| Decrypt File | AES-256 decryption |
+| Secure Delete | Multi-pass file wiping |
+| Hash Calculator | MD5/SHA1/SHA256/SHA512 |
+| Key Generator | Random encryption keys |
+| ZIP Cracker | Password-protected ZIP attack |
+
+### 8. Information Gathering (7)
+| Tool | Description |
+|------|-------------|
+| Whois Lookup | Domain registration info |
+| DNS Lookup | A/AAAA/MX/TXT/NS records |
+| SSL Info | Certificate analysis + expiry check |
+| Subdomain Finder | Multi-threaded DNS enumeration |
+| HTTP Headers | Security header analysis |
+| CVE Search | Vulnerability database lookup |
+| Report Generator | HTML/TXT/JSON pentest reports |
+
+### 9. Post Exploitation (3)
+| Tool | Description |
+|------|-------------|
+| Reverse Shell | 9 language templates |
+| Netcat Listener | Quick listener setup |
+| MSFvenom | Payload generation |
 
 ---
 
-## ⚠️ **Safety & Legal Considerations**
+## 📁 Package Structure
 
-- Only use on systems you **own** or have **explicit written permission** to test
-- Always maintain proper **documentation** of your testing activities
-- Follow responsible **disclosure procedures** for any vulnerabilities found
-- Consider using **isolated environments** for testing dangerous exploits
-- Remember that unauthorized testing is **illegal** in most jurisdictions
+```
+pentra-x/
+├── pentrax/
+│   ├── __init__.py       # Linux check + exports
+│   ├── __main__.py       # Entry point
+│   ├── cli.py            # Curses menu system
+│   ├── core/             # Shared utilities
+│   │   ├── colors.py, config.py, logging.py
+│   │   ├── spinner.py, utils.py
+│   └── modules/          # Tool categories
+│       ├── network/, web/, wireless/
+│       ├── social/, password/, mitm/
+│       ├── crypto/, osint/, postex/
+├── config.yaml           # Configuration
+├── requirements.txt      # Dependencies
+└── setup.py              # pip install
+```
 
 ---
 
-## 📜 **License**
+## ⚙️ Configuration
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Edit `config.yaml` to customize:
+```yaml
+general:
+  results_dir: ~/.pentrax/results
+  
+network:
+  default_timeout: 3
+  max_threads: 100
 
-## 🤝 **Contributing**
+wordlists:
+  passwords: /usr/share/wordlists/rockyou.txt
+  subdomains: /usr/share/wordlists/subdomains.txt
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+---
+
+## 💡 Usage Tips
+
+- Use **root privileges** for full functionality
+- Run on **Kali Linux** or similar for best results
+- Navigate menus with **arrow keys** ↑↓
+- Press **Ctrl+C** to exit gracefully
+- Generated reports saved to `~/.pentrax/results/`
+
+---
+
+## ⚠️ Legal Considerations
+
+- Only test systems you **own** or have **written permission** to test
+- Maintain proper **documentation** of testing activities
+- Follow **responsible disclosure** for vulnerabilities found
+- Unauthorized testing is **illegal** in most jurisdictions
+
+---
+
+## 📜 License
+
+MIT License - See LICENSE file for details.
+
+## 🤝 Contributing
+
+Contributions welcome! Submit a Pull Request.
 
 ---
 
