@@ -33,11 +33,13 @@ from .modules.osint.ssl_info import ssl_info
 from .modules.osint.subdomain_finder import subdomain_finder
 from .modules.osint.headers_grabber import headers_grabber
 from .modules.osint.cve_search import cve_search
+from .modules.osint.report_gen import generate_report
 
 # Import crypto modules
 from .modules.crypto.file_crypto import encrypt_file, decrypt_file
 from .modules.crypto.hash_utils import hash_file, generate_key
 from .modules.crypto.secure_delete import secure_delete
+from .modules.crypto.zip_crack import crack_zip
 
 # Import password modules
 from .modules.password.hash_cracker import crack_hash
@@ -49,9 +51,11 @@ from .modules.postex.msfvenom_gen import msfvenom_generate
 
 # Import wireless modules
 from .modules.wireless.wifi_scan import wifi_scan, enable_monitor_mode
+from .modules.wireless.handshake import capture_handshake, crack_handshake
 
 # Import social modules
 from .modules.social.phishing_gen import phishing_page_generator
+from .modules.social.social_tools import setoolkit, email_spoof, site_cloner
 
 # Import mitm modules
 from .modules.mitm.arp_spoof import arp_spoof, dns_spoof
@@ -101,9 +105,14 @@ CATEGORIZED_MENUS = {
     "Wireless Attacks": [
         ("WiFi Network Scan", wifi_scan),
         ("Enable Monitor Mode", enable_monitor_mode),
+        ("Capture WPA Handshake", capture_handshake),
+        ("Crack WPA Handshake", crack_handshake),
     ],
     "Social Engineering": [
         ("Phishing Page Generator", phishing_page_generator),
+        ("SET Toolkit", setoolkit),
+        ("Email Spoofer", email_spoof),
+        ("Website Cloner", site_cloner),
     ],
     "Password Attacks": [
         ("Hydra Login Bruteforce", hydra_attack),
@@ -119,6 +128,7 @@ CATEGORIZED_MENUS = {
         ("Secure File Deletion", secure_delete),
         ("File Hash Calculator", hash_file),
         ("Generate Encryption Key", generate_key),
+        ("Crack ZIP Password", crack_zip),
     ],
     "Information Gathering": [
         ("Whois Lookup", whois_lookup),
@@ -127,6 +137,7 @@ CATEGORIZED_MENUS = {
         ("Subdomain Finder", subdomain_finder),
         ("HTTP Headers", headers_grabber),
         ("CVE Search", cve_search),
+        ("Generate Report", generate_report),
     ],
     "Post Exploitation": [
         ("Generate Reverse Shell", generate_reverse_shell),

@@ -3,6 +3,7 @@
 from .file_crypto import encrypt_file, decrypt_file
 from .hash_utils import hash_file, generate_key
 from .secure_delete import secure_delete
+from .zip_crack import crack_zip
 
 __all__ = [
     'encrypt_file',
@@ -10,4 +11,5 @@ __all__ = [
     'hash_file',
     'generate_key',
     'secure_delete',
+    'crack_zip',
 ]

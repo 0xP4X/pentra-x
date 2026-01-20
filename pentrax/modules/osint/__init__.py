@@ -6,6 +6,7 @@ from .ssl_info import ssl_info
 from .subdomain_finder import subdomain_finder
 from .headers_grabber import headers_grabber
 from .cve_search import cve_search
+from .report_gen import generate_report
 
 __all__ = [
     'whois_lookup',
@@ -14,4 +15,5 @@ __all__ = [
     'subdomain_finder',
     'headers_grabber',
     'cve_search',
+    'generate_report',
 ]
