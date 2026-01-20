@@ -1,0 +1,46 @@
+# PENTRA-X Configuration File
+# Copy to ~/.pentrax/config.yaml or keep in the pentra-x directory
+
+version: '2.0.0'
+
+general:
+  verbose: false
+  log_level: INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  results_dir: ~/.pentrax/results
+  logs_dir: ~/.pentrax/logs
+
+network:
+  timeout: 10
+  max_threads: 50
+  default_ports: '21,22,23,25,53,80,110,111,135,139,143,443,445,993,995,1723,3306,3389,5432,5900,8080'
+
+web:
+  user_agent: 'Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0'
+  timeout: 30
+  follow_redirects: true
+  max_redirects: 5
+
+wireless:
+  default_interface: wlan0
+  monitor_interface: wlan0mon
+  handshake_dir: ~/.pentrax/handshakes
+
+wordlists:
+  directory: /usr/share/wordlists
+  passwords: /usr/share/wordlists/rockyou.txt
+  directories: /usr/share/wordlists/dirb/common.txt
+  subdomains: /usr/share/wordlists/subdomains.txt
+
+tools:
+  nmap_path: nmap
+  hydra_path: hydra
+  sqlmap_path: sqlmap
+  gobuster_path: gobuster
+  aircrack_path: aircrack-ng
+  bettercap_path: bettercap
+
+display:
+  clear_screen: true
+  show_banner: true
+  color_output: true
+  animation_speed: 0.03

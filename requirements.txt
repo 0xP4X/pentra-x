@@ -1,0 +1,12 @@
+# PENTRA-X Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core dependencies
+pycryptodome>=3.19.0    # AES encryption
+PyYAML>=6.0             # Configuration file parsing
+requests>=2.31.0        # HTTP requests
+
+# Optional dependencies (installed separately on Kali)
+# scapy                 # Packet manipulation (pip install scapy)
+# shodan                # Shodan API (pip install shodan)
+# python-nmap           # Nmap Python bindings (pip install python-nmap)

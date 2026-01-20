@@ -1,34 +1,60 @@
 #!/bin/bash
-# Install pentrax as a system-wide Kali tool
+# Install pentrax as a system-wide tool
+# PENTRA-X v2.0.0 Installer
 
 set -e
 
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║              PENTRA-X v2.0.0 INSTALLER                       ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+
 # Ensure running as root
 if [ "$EUID" -ne 0 ]; then
-  echo "Please run as root (sudo ./install.sh)"
+  echo "[!] Please run as root (sudo ./install.sh)"
   exit 1
 fi
 
-# Path to main script
-SCRIPT="$(pwd)/pentrax.py"
-TARGET="/usr/local/bin/pentrax"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Add shebang if missing
-if ! head -n 1 "$SCRIPT" | grep -q "^#!/"; then
-  sed -i '1i#!/usr/bin/env python3' "$SCRIPT"
+echo "[*] Installing dependencies..."
+
+# Update pip
+pip3 install --upgrade pip
+
+# Install Python requirements
+pip3 install -r "$SCRIPT_DIR/requirements.txt"
+
+echo "[*] Installing pentrax package..."
+
+# Install as editable package (development mode)
+pip3 install -e "$SCRIPT_DIR"
+
+# Create config directory
+echo "[*] Creating config directory..."
+mkdir -p /etc/pentrax
+if [ ! -f /etc/pentrax/config.yaml ]; then
+    cp "$SCRIPT_DIR/config.yaml" /etc/pentrax/config.yaml
 fi
 
-# Copy to /usr/local/bin
-cp "$SCRIPT" "$TARGET"
-chmod +x "$TARGET"
+# Create user directories
+echo "[*] Creating user directories..."
+mkdir -p ~/.pentrax/{logs,results,handshakes}
 
-# Install Python dependencies
-pip3 install --upgrade pip
-pip3 install pycryptodome
-
-# Confirm install
+# Verify installation
+echo ""
 if command -v pentrax >/dev/null 2>&1; then
-  echo "[+] pentrax installed! Type 'pentrax' anywhere to launch."
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║  [✓] PENTRA-X installed successfully!                        ║"
+    echo "║                                                              ║"
+    echo "║  Usage:                                                      ║"
+    echo "║    pentrax              - Launch the toolkit                 ║"
+    echo "║    python -m pentrax    - Alternative launch method          ║"
+    echo "║                                                              ║"
+    echo "║  Config: /etc/pentrax/config.yaml                            ║"
+    echo "║  Logs:   ~/.pentrax/logs/                                    ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
 else
-  echo "[!] Installation failed. Check permissions and try again."
+    echo "[!] Installation may have failed. Please check errors above."
+    echo "[*] You can still run with: python3 -m pentrax"
+    exit 1
 fi
