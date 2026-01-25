@@ -11,7 +11,7 @@
 
 <p align="center">
   <b>PENTRA-X: Full Pentest Toolkit (v2.0.0)</b><br>
-  <i>Created by 0xP4X</i><br>
+  <i>Created by Prince Ofori</i><br>
   <a href="https://github.com/0xP4X/">GitHub</a>
 </p>
 
@@ -224,6 +224,6 @@ Contributions welcome! Submit a Pull Request.
 ---
 
 <p align="center">
-  <b>Created with ❤️ by 0xP4X</b><br>
+  <b>Created with ❤️ by Prince Ofori</b><br>
   <a href="https://github.com/0xP4X/">https://github.com/0xP4X/</a>
 </p>

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "pentrax"
 version = "2.0.0"
 description = "Advanced Pentesting Toolkit"
-authors = [{name = "0xP4X"}]
+authors = [{name = "Prince Ofori"}]
 readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [

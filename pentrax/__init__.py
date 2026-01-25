@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 PENTRA-X - Advanced Pentesting Toolkit
-Created by 0xP4X
+Created by Prince Ofori
 
 A comprehensive penetration testing toolkit featuring:
 - Network reconnaissance and scanning

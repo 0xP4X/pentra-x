@@ -39,7 +39,7 @@ BANNER = f"""
 ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
               FULL PENTEST TOOLKIT (V1.2.1)
 
-         {Colors.BOLD}Created by 0xP4X{Colors.ENDC}{Colors.OKCYAN}
+         {Colors.BOLD}Created by Prince Ofori{Colors.ENDC}{Colors.OKCYAN}
          GitHub: https://github.com/0xP4X/
 """
 
