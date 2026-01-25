@@ -274,32 +274,48 @@ def show_category_menu(category: str) -> None:
 
 
 def show_help_menu() -> None:
-    """Display help menu."""
-    print(f"\n{Colors.OKCYAN}=== HELP & DOCUMENTATION ==={Colors.ENDC}")
-    print(f"""
-{Colors.OKBLUE}PENTRA-X v2.0.0{Colors.ENDC}
-A comprehensive penetration testing toolkit.
-
-{Colors.OKCYAN}Categories:{Colors.ENDC}
-  1. Network Reconnaissance - ARP scans, port scans, Nmap
-  2. Web Testing - SQL injection, XSS, LFI/RFI, SSRF
-  3. Wireless Attacks - WiFi scanning, handshake capture
-  4. Social Engineering - Phishing frameworks
-  5. Password Attacks - Brute force, hash cracking
-  6. MITM Attacks - ARP/DNS spoofing
-  7. File Security - Encryption, secure deletion
-  8. Information Gathering - OSINT, DNS, Whois
-  9. Post Exploitation - Shells, payloads, persistence
-
-{Colors.OKCYAN}Navigation:{Colors.ENDC}
-  • Use arrow keys ↑↓ to navigate menus
-  • Press Enter to select
-  • Press 0 to go back
-  • Press Ctrl+C to exit gracefully
-
-{Colors.WARNING}Legal Notice:{Colors.ENDC}
-  Only use on systems you own or have explicit permission to test.
-""")
+    """Display an advanced and official help & documentation menu."""
+    from .core.config import get_config
+    config = get_config()
+    
+    print(f"\n{Colors.OKCYAN}╔{'═' * 70}╗{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}║{' PENTRA-X ADVANCED DOCUMENTATION ':^70}║{Colors.ENDC}")
+    print(f"{Colors.OKCYAN}╚{'═' * 70}╝{Colors.ENDC}")
+    
+    print(f"\n{Colors.BOLD}{Colors.OKBLUE}1. OVERVIEW{Colors.ENDC}")
+    print(f"   PENTRA-X is a modular, high-performance penetration testing framework")
+    print(f"   designed for security professionals and authorized auditors.")
+    print(f"   Version: {Colors.OKGREEN}v2.0.0{Colors.ENDC} | Author: {Colors.OKGREEN}Prince Ofori{Colors.ENDC}")
+    
+    print(f"\n{Colors.BOLD}{Colors.OKBLUE}2. OPERATIONAL MODULES{Colors.ENDC}")
+    print(f"   {Colors.OKCYAN}• Network Recon  :{Colors.ENDC} Stealth scans, service discovery, and nmap automation.")
+    print(f"   {Colors.OKCYAN}• Web Auditing   :{Colors.ENDC} SQLi, XSS, Path Traversal, and directory enumeration.")
+    print(f"   {Colors.OKCYAN}• Wireless       :{Colors.ENDC} Monitor mode injection and handshake cryptanalysis.")
+    print(f"   {Colors.OKCYAN}• Social Eng     :{Colors.ENDC} Dynamic phishing generation and site replication.")
+    print(f"   {Colors.OKCYAN}• OSINT & Intel  :{Colors.ENDC} DNS/Whois lookups, SSL analysis, and CVE tracking.")
+    print(f"   {Colors.OKCYAN}• Post-Exploit   :{Colors.ENDC} Multi-lang reverse shells and msfvenom integration.")
+    
+    print(f"\n{Colors.BOLD}{Colors.OKBLUE}3. NAVIGATION & INTERFACE{Colors.ENDC}")
+    print(f"   {Colors.OKCYAN}↑/↓{Colors.ENDC}        Move selection in menus")
+    print(f"   {Colors.OKCYAN}Enter{Colors.ENDC}      Execute selected module or submenu")
+    print(f"   {Colors.OKCYAN}0{Colors.ENDC}          Return to previous menu / Exit main menu")
+    print(f"   {Colors.OKCYAN}Ctrl+C{Colors.ENDC}     Graceful interrupt of active scans and processes")
+    
+    print(f"\n{Colors.BOLD}{Colors.OKBLUE}4. DATA MANAGEMENT{Colors.ENDC}")
+    print(f"   {Colors.OKCYAN}Logs     :{Colors.ENDC} {config.get('general.logs_dir')}")
+    print(f"   {Colors.OKCYAN}Results  :{Colors.ENDC} {config.get('general.results_dir')}")
+    print(f"   {Colors.OKCYAN}Reports  :{Colors.ENDC} Detailed HTML/JSON/TXT reports are generated in the results dir.")
+    
+    print(f"\n{Colors.BOLD}{Colors.OKBLUE}5. CONFIGURATION{Colors.ENDC}")
+    print(f"   Global settings are stored in {Colors.OKCYAN}/etc/pentrax/config.yaml{Colors.ENDC}")
+    print(f"   User overrides are possible via {Colors.OKCYAN}~/.pentrax/config.yaml{Colors.ENDC}")
+    
+    print(f"\n{Colors.WARNING}⚠️  OFFICIAL LEGAL NOTICE{Colors.ENDC}")
+    print(f"   This software is for AUTHORIZED professional use only. Performance")
+    print(f"   of unauthorized security testing is a violation of international")
+    print(f"   cyber-laws. The author assumes no liability for malicious use.")
+    
+    print(f"\n{Colors.OKCYAN}{'═' * 72}{Colors.ENDC}")
     safe_press_enter()
 
 
