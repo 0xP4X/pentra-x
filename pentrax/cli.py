@@ -150,14 +150,29 @@ MAIN_CATEGORIES = list(CATEGORIZED_MENUS.keys()) + ["Help & Documentation"]
 
 
 def show_banner() -> None:
-    """Display the PENTRA-X banner."""
+    """Display the PENTRA-X banner with animation."""
+    import time
     config = get_config()
     
     if config.get('display.clear_screen', True):
-        os.system('clear')
+        # Use cross-platform clear command
+        os.system('cls' if os.name == 'nt' else 'clear')
     
-    print(BANNER)
-    print(DISCLAIMER)
+    # Animate Banner
+    for line in BANNER.split('\n'):
+        if line.strip():
+            print(f"{Colors.OKCYAN}{line}{Colors.ENDC}")
+            time.sleep(0.05)
+    
+    print(f"\n      {Colors.BOLD}{Colors.OKBLUE}FULL PENTEST TOOLKIT (V2.0.0){Colors.ENDC}\n")
+    
+    # Animate Disclaimer
+    for line in DISCLAIMER.split('\n'):
+        if line.strip():
+            print(line)
+            time.sleep(0.02)
+    
+    time.sleep(0.5)
 
 
 def show_main_menu() -> None:
