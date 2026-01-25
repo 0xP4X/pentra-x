@@ -34,29 +34,45 @@
 - ✅ **Progress Indicators** - Spinners and progress bars for all operations
 - ✅ **Report Generation** - Professional HTML/TXT/JSON pentest reports
 
----
-
 ## 🏃‍♂️ Quick Start
 
 ### Requirements
-- Linux system (Kali, Parrot, Ubuntu, etc.)
-- Python 3.7+
-- Root/sudo privileges for full functionality
+- **Linux system** (Kali Linux or Parrot OS highly recommended)
+- **Python 3.7+**
+- **Root/sudo** privileges
 
 ### Installation
+
+The easiest way to install PENTRA-X and all its system dependencies (nmap, sqlmap, etc.) is using the provided script or Makefile:
+
 ```bash
 git clone https://github.com/0xP4X/pentra-x.git
 cd pentra-x
 
-# Option 1: Install as package (recommended)
-pip install -e .
-pentrax
+# Option 1: One-command install (Recommended)
+make install
 
-# Option 2: Run directly
-python3 -m pentrax
-
-# Option 3: System-wide install
+# Option 2: Run script directly
 sudo ./install.sh
+```
+
+Once installed, you can launch the toolkit from anywhere:
+```bash
+sudo pentrax
+```
+
+---
+
+## 🛠️ Development & Testing
+
+For developers who want to contribute or run tests:
+
+```bash
+# Install development dependencies
+pip install -e .[dev]
+
+# Run tests
+make test
 ```
 
 ---

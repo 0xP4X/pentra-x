@@ -14,8 +14,15 @@ cracked.json
 # Ignore all files in the .vscode directory
 .vscode/
 
-
-
-
-
-
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+env/
+venv/
