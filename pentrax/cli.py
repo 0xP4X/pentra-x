@@ -69,8 +69,6 @@ BANNER = f"""
 ██╔═══╝ ██╔══╝  ██║╚██╗██║   ██║   ██╔═══╝ ██╔══██║ ██╔██╗ 
 ██║     ███████╗██║ ╚████║   ██║   ██║     ██║  ██║██╔╝ ██╗
 ╚═╝     ╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝
-
-      FULL PENTEST TOOLKIT (V2.0.0)
 {Colors.ENDC}
 """
 
@@ -164,7 +162,10 @@ def show_banner() -> None:
             print(f"{Colors.OKCYAN}{line}{Colors.ENDC}")
             time.sleep(0.05)
     
-    print(f"\n      {Colors.BOLD}{Colors.OKBLUE}FULL PENTEST TOOLKIT (V2.0.0){Colors.ENDC}\n")
+    print(f"\n      {Colors.BOLD}{Colors.OKBLUE}FULL PENTEST TOOLKIT (V2.0.0){Colors.ENDC}")
+    print(f"      {Colors.OKCYAN}Author   : Prince Ofori{Colors.ENDC}")
+    print(f"      {Colors.OKCYAN}GitHub   : https://github.com/0xP4X/pentra-x{Colors.ENDC}")
+    print(f"      {Colors.OKCYAN}Portfolio: https://princeofori.info{Colors.ENDC}\n")
     
     # Animate Disclaimer
     for line in DISCLAIMER.split('\n'):
@@ -286,6 +287,7 @@ def show_help_menu() -> None:
     print(f"   PENTRA-X is a modular, high-performance penetration testing framework")
     print(f"   designed for security professionals and authorized auditors.")
     print(f"   Version: {Colors.OKGREEN}v2.0.0{Colors.ENDC} | Author: {Colors.OKGREEN}Prince Ofori{Colors.ENDC}")
+    print(f"   Portfolio: {Colors.OKCYAN}https://princeofori.info{Colors.ENDC}")
     
     print(f"\n{Colors.BOLD}{Colors.OKBLUE}2. OPERATIONAL MODULES{Colors.ENDC}")
     print(f"   {Colors.OKCYAN}• Network Recon  :{Colors.ENDC} Stealth scans, service discovery, and nmap automation.")
